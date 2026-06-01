@@ -1,0 +1,173 @@
+name: bizkit
+x-logging: &default-logging
+  driver: 'json-file'
+  options:
+    max-size: "50m"
+    max-file: "10"
+    compress: "true"
+
+x-healthcheck: &default-healthcheck
+  interval: 10s
+  retries: 3
+  timeout: 5s
+
+x-base: &base
+  profiles: [ app ]
+  env_file:
+    - .env
+  build:
+
+    context: .
+    dockerfile: Dockerfile
+    cache_from:
+      - 'laravel/app:latest'
+    args:
+      USER_ID: ${HOST_UID:-1000}
+      GROUP_ID: ${HOST_GID:-1000}
+  image: 'laravel/app:latest'
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  ulimits:
+    nofile:
+      soft: 65536
+      hard: 65536
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - stack
+  volumes:
+    - './storage/app/public:/var/www/html/storage/app/public'
+    - './storage/logs:/var/www/html/storage/logs'
+  logging: *default-logging
+  restart: unless-stopped
+networks:
+  stack:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+# volumes:
+#   stack-pgsql:
+#     driver: local
+#   stack-redis:
+#     driver: local
+#   stack-rustfs:
+#     driver: local
+services:
+  app:
+    <<: *base
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--max-time", "10", "localhost:8000/up"]
+      <<: *default-healthcheck
+    stop_grace_period: 35s
+
+  horizon:
+    <<: *base
+    environment:
+      CONTAINER_MODE: horizon
+
+  scheduler:
+    <<: *base
+    environment:
+      CONTAINER_MODE: scheduler
+
+  inertia:
+    <<: *base
+    environment:
+      CONTAINER_MODE: ssr
+
+  reverb:
+    <<: *base
+    ports:
+      - "8080:8080"
+    environment:
+      CONTAINER_MODE: reverb
+
+  # redis:
+  #   profiles: [ app ]
+  #   image: 'redis:7-alpine'
+  #   ulimits:
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   command: [
+  #     "redis-server",
+  #     "--requirepass", "${REDIS_PASSWORD}",
+  #     "--maxmemory", "${REDIS_MAXMEMORY:-2gb}",
+  #     "--maxmemory-policy", "allkeys-lru",
+  #     "--save", "900 1",
+  #     "--save", "300 10",
+  #     "--save", "60 10000"
+  #   ]
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   volumes:
+  #     - 'stack-redis:/data'
+  #   networks:
+  #     - stack
+  #   logging: *default-logging
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+  #     <<: *default-healthcheck
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 2.5G
+
+  # pgsql:
+  #   profiles: [ app ]
+  #   image: 'postgres:${POSTGRES_VERSION:-18}-alpine'
+  #   ulimits:
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   environment:
+  #     PGPASSWORD: '${DB_PASSWORD}'
+  #     POSTGRES_DB: '${DB_DATABASE}'
+  #     POSTGRES_USER: '${DB_USERNAME}'
+  #     POSTGRES_PASSWORD: '${DB_PASSWORD}'
+  #   volumes:
+  #     - 'stack-pgsql:/var/lib/postgresql'
+  #   networks:
+  #     - stack
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+  #     <<: *default-healthcheck
+  #   restart: unless-stopped
+  #   logging: *default-logging
+
+  # rustfs:
+  #   profiles: [ app ]
+  #   image: 'rustfs/rustfs:latest'
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   environment:
+  #     RUSTFS_VOLUMES: '/data'
+  #     RUSTFS_ADDRESS: '0.0.0.0:9000'
+  #     RUSTFS_CONSOLE_ADDRESS: '0.0.0.0:9001'
+  #     RUSTFS_CONSOLE_ENABLE: 'true'
+  #     RUSTFS_EXTERNAL_ADDRESS: ':9000'
+  #     RUSTFS_CORS_ALLOWED_ORIGINS: '*'
+  #     RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS: '*'
+  #     RUSTFS_ACCESS_KEY: '${RUSTFS_ACCESS_KEY}'
+  #     RUSTFS_SECRET_KEY: '${RUSTFS_SECRET_KEY}'
+  #     RUSTFS_LOG_LEVEL: 'info'
+  #   volumes:
+  #     - 'stack-rustfs:/data'
+  #   networks:
+  #     - stack
+  #   restart: unless-stopped
+  #   logging: *default-logging
+  #   healthcheck:
+  #     test: [
+  #       "CMD",
+  #       "sh", "-c",
+  #       "curl -f http://127.0.0.1:9000/health && curl -f http://127.0.0.1:9001/health"
+  #     ]
+  #     <<: *default-healthcheck

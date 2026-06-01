@@ -1,0 +1,445 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands;
+
+use App\Console\Commands\Upgrade\FileClassifier;
+use App\Console\Commands\Upgrade\FileStatus;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Process;
+use Symfony\Component\Console\Attribute\AsCommand;
+
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\outro;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\spin;
+use function Laravel\Prompts\warning;
+
+#[AsCommand(name: 'bizkit:upgrade')]
+final class UpgradeCommand extends Command
+{
+    /**
+     * The upstream GitHub repository slug.
+     */
+    private const string UPSTREAM_REPO = 'akrista/bizkit';
+
+    /**
+     * The local version tracking file.
+     */
+    private const string VERSION_FILE = 'bizkit.json';
+
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'bizkit:upgrade
+                            {--dev : Compare against HEAD instead of a stable tag}
+                            {--dry-run : Show what would change without applying anything}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Upgrade your project by pulling in changes from the upstream bizkit skeleton.';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle(): int
+    {
+        info('🚀 bizkit upgrade');
+        note('Comparing your project against the upstream skeleton at '.self::UPSTREAM_REPO);
+
+        if (! $this->passesPreflight()) {
+            return self::FAILURE;
+        }
+
+        $currentVersion = $this->readCurrentVersion();
+        $targetRef = $this->resolveTargetRef($currentVersion);
+
+        if ($targetRef === null) {
+            return self::FAILURE;
+        }
+
+        $upstreamFiles = spin(
+            fn (): array => $this->fetchUpstreamFiles($targetRef),
+            'Fetching upstream files from '.self::UPSTREAM_REPO.'@'.$targetRef.'…',
+        );
+
+        if ($upstreamFiles === []) {
+            error('Could not fetch upstream files. Check your internet connection and that `gh` is authenticated.');
+
+            return self::FAILURE;
+        }
+
+        $classifier = new FileClassifier($upstreamFiles, base_path());
+        $classified = $classifier->classify();
+
+        $this->printSummary($classified);
+
+        if ($this->option('dry-run')) {
+            outro('Dry run complete. No changes were made.');
+
+            return self::SUCCESS;
+        }
+
+        if (! confirm('Proceed with applying changes?', default: true)) {
+            outro('Aborted. No changes were made.');
+
+            return self::SUCCESS;
+        }
+
+        $this->applyChanges($classified, $upstreamFiles);
+        $this->updateVersionFile($targetRef);
+
+        outro('✅ Upgrade complete! Review applied changes with `git diff HEAD`.');
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Run preflight checks: git available, gh authenticated, clean working tree.
+     */
+    private function passesPreflight(): bool
+    {
+        // Check git is available
+        if (! $this->commandExists('git')) {
+            error('`git` is not available. Please install git and try again.');
+
+            return false;
+        }
+
+        // Check gh is available
+        if (! $this->commandExists('gh')) {
+            error('`gh` (GitHub CLI) is not available. Install it from https://cli.github.com and run `gh auth login`.');
+
+            return false;
+        }
+
+        // Check gh is authenticated
+        $authCheck = Process::run('gh auth status');
+        if (! $authCheck->successful()) {
+            error('`gh` is not authenticated. Run `gh auth login` and try again.');
+
+            return false;
+        }
+
+        // Check for clean working tree
+        $statusCheck = Process::run('git status --porcelain');
+        if (! $statusCheck->successful()) {
+            error('Could not determine git status. Are you inside a git repository?');
+
+            return false;
+        }
+
+        if (mb_trim($statusCheck->output()) !== '') {
+            error('Your working tree has uncommitted changes. Please commit or stash them before upgrading.');
+            $this->line($statusCheck->output());
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Read the currently pinned version from bizkit.json.
+     */
+    private function readCurrentVersion(): ?string
+    {
+        $versionFile = base_path(self::VERSION_FILE);
+
+        if (! file_exists($versionFile)) {
+            warning(self::VERSION_FILE.' not found. Assuming this is a fresh project with no pinned version.');
+
+            return null;
+        }
+
+        /** @var array{version?: string, repository?: string} $data */
+        $data = json_decode((string) file_get_contents($versionFile), associative: true) ?? [];
+
+        return $data['version'] ?? null;
+    }
+
+    /**
+     * Resolve the upstream git ref to compare against.
+     * Uses the latest tag by default, or HEAD when --dev is passed.
+     */
+    private function resolveTargetRef(?string $currentVersion): ?string
+    {
+        if ($this->option('dev')) {
+            info('Using HEAD (--dev flag set).');
+
+            return 'HEAD';
+        }
+
+        $result = spin(
+            fn (): string => Process::run(
+                'gh api repos/'.self::UPSTREAM_REPO.'/tags --jq \'.[].name\'',
+            )->output(),
+            'Fetching available upstream tags…',
+        );
+
+        $tags = array_filter(array_map('trim', explode("\n", $result)));
+
+        if ($tags === []) {
+            error('No tags found on '.self::UPSTREAM_REPO.'. Use --dev to compare against HEAD.');
+
+            return null;
+        }
+
+        // Latest tag is first in the GitHub response
+        $latestTag = reset($tags);
+
+        if ($currentVersion !== null && $currentVersion === $latestTag) {
+            outro("You're already on the latest version ({$latestTag}). Nothing to upgrade.");
+
+            return null;
+        }
+
+        if ($currentVersion !== null) {
+            info("Current version: {$currentVersion} → Latest: {$latestTag}");
+        } else {
+            info("Latest upstream tag: {$latestTag}");
+        }
+
+        return $latestTag;
+    }
+
+    /**
+     * Fetch all files from the upstream repo at the given ref via the GitHub API.
+     *
+     * @return array<string, string> Map of relative path => raw content.
+     */
+    private function fetchUpstreamFiles(string $ref): array
+    {
+        $result = Process::run(
+            'gh api repos/'.self::UPSTREAM_REPO.'/git/trees/'.$ref.'?recursive=1 --jq \'.tree[] | select(.type=="blob") | .path\'',
+        );
+
+        if (! $result->successful()) {
+            return [];
+        }
+
+        $paths = array_filter(array_map('trim', explode("\n", $result->output())));
+        $files = [];
+
+        foreach ($paths as $path) {
+            // Skip binary/build artifacts and lock files — handled separately
+            if ($this->shouldSkipPath($path)) {
+                continue;
+            }
+
+            $content = Process::run(
+                'gh api repos/'.self::UPSTREAM_REPO.'/contents/'.$path.'?ref='.$ref.' --jq \'.content\' | base64 --decode',
+            );
+
+            if ($content->successful()) {
+                $files[$path] = $content->output();
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * Whether a path should be excluded from classification entirely.
+     */
+    private function shouldSkipPath(string $path): bool
+    {
+        $skippedPrefixes = [
+            'vendor/',
+            'node_modules/',
+            '.git/',
+        ];
+
+        $skippedFiles = [
+            'composer.lock',
+            'bun.lock',
+            'package-lock.json',
+            'yarn.lock',
+            'pnpm-lock.yaml',
+        ];
+
+        foreach ($skippedPrefixes as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+
+        return in_array($path, $skippedFiles, strict: true);
+    }
+
+    /**
+     * Print a summary table of classified files.
+     *
+     * @param  array<string, FileStatus>  $classified
+     */
+    private function printSummary(array $classified): void
+    {
+        $grouped = [];
+        foreach ($classified as $path => $status) {
+            $grouped[$status->value][] = $path;
+        }
+
+        $newCount = count($grouped[FileStatus::New->value] ?? []);
+        $differsCount = count($grouped[FileStatus::Differs->value] ?? []);
+        $alreadyCount = count($grouped[FileStatus::AlreadyPresent->value] ?? []);
+        $deletedCount = count($grouped[FileStatus::DeletedUpstream->value] ?? []);
+
+        $this->newLine();
+        info(sprintf(
+            'Summary: %d new · %d differs · %d already present · %d deleted upstream',
+            $newCount,
+            $differsCount,
+            $alreadyCount,
+            $deletedCount,
+        ));
+        $this->newLine();
+
+        if ($newCount > 0) {
+            $this->line('<fg=green>New files (will be applied automatically):</>');
+            foreach ($grouped[FileStatus::New->value] as $path) {
+                $this->line("  + {$path}");
+            }
+            $this->newLine();
+        }
+
+        if ($differsCount > 0) {
+            $this->line('<fg=yellow>Files that differ (you will decide for each):</>');
+            foreach ($grouped[FileStatus::Differs->value] as $path) {
+                $this->line("  ~ {$path}");
+            }
+            $this->newLine();
+        }
+
+        if ($deletedCount > 0) {
+            $this->line('<fg=red>Deleted upstream (you will decide for each):</>');
+            foreach ($grouped[FileStatus::DeletedUpstream->value] as $path) {
+                $this->line("  - {$path}");
+            }
+            $this->newLine();
+        }
+    }
+
+    /**
+     * Apply new files automatically and walk user through differing files.
+     *
+     * @param  array<string, FileStatus>  $classified
+     * @param  array<string, string>  $upstreamFiles
+     */
+    private function applyChanges(array $classified, array $upstreamFiles): void
+    {
+        foreach ($classified as $path => $status) {
+            match ($status) {
+                FileStatus::New => $this->applyNewFile($path, $upstreamFiles[$path]),
+                FileStatus::Differs => $this->walkUserThroughDiff($path, $upstreamFiles[$path]),
+                FileStatus::DeletedUpstream => $this->walkUserThroughDeletion($path),
+                FileStatus::AlreadyPresent => null, // nothing to do
+            };
+        }
+    }
+
+    /**
+     * Write a new file from upstream into the local project.
+     */
+    private function applyNewFile(string $relativePath, string $content): void
+    {
+        $localPath = base_path($relativePath);
+        $directory = dirname($localPath);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0755, recursive: true);
+        }
+
+        file_put_contents($localPath, $content);
+        $this->line("<fg=green>  ✓ Applied new file:</> {$relativePath}");
+    }
+
+    /**
+     * Show the diff for a changed file and let the user decide.
+     */
+    private function walkUserThroughDiff(string $relativePath, string $upstreamContent): void
+    {
+        $this->newLine();
+        $this->line("<fg=yellow>  ~ Differs:</> {$relativePath}");
+
+        // Write upstream content to a temp file for diffing
+        $tempFile = tempnam(sys_get_temp_dir(), 'bizkit_upstream_');
+        file_put_contents($tempFile, $upstreamContent);
+
+        $diff = Process::run('git diff --no-index -- '.base_path($relativePath)." {$tempFile}");
+        $this->line($diff->output());
+
+        @unlink($tempFile);
+
+        $choice = select(
+            label: "What would you like to do with {$relativePath}?",
+            options: [
+                'keep' => 'Keep my version (skip)',
+                'take' => 'Take upstream version (overwrites your changes)',
+            ],
+            default: 'keep',
+        );
+
+        if ($choice === 'take') {
+            file_put_contents(base_path($relativePath), $upstreamContent);
+            $this->line("<fg=green>  ✓ Took upstream version:</> {$relativePath}");
+        } else {
+            $this->line("<fg=gray>  – Kept local version:</> {$relativePath}");
+        }
+    }
+
+    /**
+     * Surface a file that was deleted upstream and let the user decide.
+     */
+    private function walkUserThroughDeletion(string $relativePath): void
+    {
+        $this->newLine();
+        warning("  {$relativePath} was deleted upstream.");
+
+        $shouldDelete = confirm(
+            label: "Delete {$relativePath} from your project?",
+            default: false,
+        );
+
+        if ($shouldDelete) {
+            @unlink(base_path($relativePath));
+            $this->line("<fg=red>  ✓ Deleted:</> {$relativePath}");
+        } else {
+            $this->line("<fg=gray>  – Kept local file:</> {$relativePath}");
+        }
+    }
+
+    /**
+     * Pin the newly applied version into bizkit.json.
+     */
+    private function updateVersionFile(string $newVersion): void
+    {
+        $versionFile = base_path(self::VERSION_FILE);
+
+        $data = [
+            'version' => $newVersion,
+            'repository' => self::UPSTREAM_REPO,
+        ];
+
+        file_put_contents($versionFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+        $this->line('<fg=green>  ✓ Updated</> '.self::VERSION_FILE." to {$newVersion}");
+    }
+
+    /**
+     * Check whether a shell command is available on the system.
+     */
+    private function commandExists(string $command): bool
+    {
+        $check = Process::run(PHP_OS_FAMILY === 'Windows' ? "where {$command}" : "which {$command}");
+
+        return $check->successful();
+    }
+}

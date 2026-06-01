@@ -1,0 +1,5 @@
+resources/js/svelte/components/ui/*
+resources/views/mail/*
+vendor/*
+node_modules/*
+public/*

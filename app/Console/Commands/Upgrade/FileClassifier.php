@@ -18,10 +18,12 @@ final readonly class FileClassifier
     /**
      * @param  array<string, string>  $upstreamFiles  Map of relative path => raw content from upstream.
      * @param  string  $localBasePath  Absolute path to the local project root.
+     * @param  string[]  $currentSkeletonFiles  List of relative paths in the current skeleton version.
      */
     public function __construct(
         private array $upstreamFiles,
         private string $localBasePath,
+        private array $currentSkeletonFiles = [],
     ) {}
 
     /**
@@ -35,6 +37,15 @@ final readonly class FileClassifier
 
         foreach ($this->upstreamFiles as $relativePath => $upstreamContent) {
             $results[$relativePath] = $this->classifyFile($relativePath, $upstreamContent);
+        }
+
+        foreach ($this->currentSkeletonFiles as $relativePath) {
+            if (! array_key_exists($relativePath, $this->upstreamFiles)) {
+                $localPath = $this->localBasePath.DIRECTORY_SEPARATOR.$relativePath;
+                if (file_exists($localPath)) {
+                    $results[$relativePath] = FileStatus::DeletedUpstream;
+                }
+            }
         }
 
         return $results;

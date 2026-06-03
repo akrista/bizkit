@@ -15,13 +15,9 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use ZipArchive;
 
 use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\error;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\note;
-use function Laravel\Prompts\outro;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\spin;
-use function Laravel\Prompts\warning;
+use function Termwind\render;
 
 #[AsCommand(name: 'bizkit:upgrade')]
 #[Description('Upgrade your project by pulling in changes from the upstream bizkit skeleton.')]
@@ -47,8 +43,16 @@ final class UpgradeCommand extends Command
     {
         Http::allowStrayRequests();
 
-        info('🚀 bizkit upgrade');
-        note('Comparing your project against the upstream skeleton at '.self::UPSTREAM_REPO);
+        render(<<<'HTML'
+            <div class="mx-2 my-1">
+                <div class="px-2 py-0.5 bg-blue-600 text-white font-bold uppercase">
+                    🚀 Bizkit Upgrader
+                </div>
+                <div class="mt-1 text-gray-500">
+                    Comparing your project against <span class="text-cyan-500 font-bold">akrista/bizkit</span>
+                </div>
+            </div>
+        HTML);
 
         if (! $this->passesPreflight()) {
             return self::FAILURE;
@@ -61,30 +65,50 @@ final class UpgradeCommand extends Command
             return self::FAILURE;
         }
 
+        $currentSkeletonFiles = [];
+        if ($currentVersion !== null) {
+            $currentSkeletonFiles = spin(
+                fn (): array => array_keys($this->fetchUpstreamFiles($currentVersion)),
+                'Fetching current skeleton files for version '.$currentVersion.'…',
+            );
+        }
+
         $upstreamFiles = spin(
             fn (): array => $this->fetchUpstreamFiles($targetRef),
             'Fetching upstream files from '.self::UPSTREAM_REPO.'@'.$targetRef.'…',
         );
 
         if ($upstreamFiles === []) {
-            error('Could not fetch upstream files. Check your internet connection and that `gh` is authenticated.');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 px-2 py-1 bg-red-600 text-white font-bold rounded">
+                    Could not fetch upstream files. Check your internet connection and that `gh` is authenticated.
+                </div>
+            HTML);
 
             return self::FAILURE;
         }
 
-        $classifier = new FileClassifier($upstreamFiles, base_path());
+        $classifier = new FileClassifier($upstreamFiles, base_path(), $currentSkeletonFiles);
         $classified = $classifier->classify();
 
         $this->printSummary($classified);
 
         if ($this->option('dry-run')) {
-            outro('Dry run complete. No changes were made.');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 text-yellow-500 font-bold">
+                    Dry run complete. No changes were made.
+                </div>
+            HTML);
 
             return self::SUCCESS;
         }
 
         if (! confirm('Proceed with applying changes?', default: true)) {
-            outro('Aborted. No changes were made.');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 text-red-500 font-bold">
+                    Aborted. No changes were made.
+                </div>
+            HTML);
 
             return self::SUCCESS;
         }
@@ -92,7 +116,14 @@ final class UpgradeCommand extends Command
         $this->applyChanges($classified, $upstreamFiles);
         $this->updateVersionFile($targetRef);
 
-        outro('✅ Upgrade complete! Review applied changes with `git diff HEAD`.');
+        render(<<<'HTML'
+            <div class="mx-2 my-2 px-2 py-1 bg-green-600 text-white font-bold">
+                🎉 Upgrade complete!
+            </div>
+            <div class="mx-2 text-gray-400">
+                Please review applied changes with <span class="text-cyan-400 font-semibold">git diff HEAD</span>
+            </div>
+        HTML);
 
         return self::SUCCESS;
     }
@@ -104,7 +135,11 @@ final class UpgradeCommand extends Command
     {
         // Check git is available
         if (! $this->commandExists('git')) {
-            error('`git` is not available. Please install git and try again.');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 px-2 py-1 bg-red-600 text-white font-bold">
+                    Error: git is not installed or available in the system PATH.
+                </div>
+            HTML);
 
             return false;
         }
@@ -112,13 +147,24 @@ final class UpgradeCommand extends Command
         // Check for clean working tree
         $statusCheck = Process::run(['git', 'status', '--porcelain']);
         if (! $statusCheck->successful()) {
-            error('Could not determine git status. Are you inside a git repository?');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 px-2 py-1 bg-red-600 text-white font-bold">
+                    Error: Could not determine git status. Are you inside a git repository?
+                </div>
+            HTML);
 
             return false;
         }
 
         if (mb_trim($statusCheck->output()) !== '') {
-            error('Your working tree has uncommitted changes. Please commit or stash them before upgrading.');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 px-2 py-1 bg-yellow-600 text-black font-bold">
+                    Uncommitted Changes Detected
+                </div>
+                <div class="mx-2 text-gray-400">
+                    Please commit or stash your changes before upgrading.
+                </div>
+            HTML);
             $this->line($statusCheck->output());
 
             return false;
@@ -135,7 +181,11 @@ final class UpgradeCommand extends Command
         $versionFile = base_path(self::VERSION_FILE);
 
         if (! file_exists($versionFile)) {
-            warning(self::VERSION_FILE.' not found. Assuming this is a fresh project with no pinned version.');
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 my-1 text-yellow-500 font-bold">
+                    [Warning] %s not found. Assuming fresh project.
+                </div>
+            HTML, self::VERSION_FILE));
 
             return null;
         }
@@ -153,7 +203,11 @@ final class UpgradeCommand extends Command
     private function resolveTargetRef(?string $currentVersion): ?string
     {
         if ($this->option('dev')) {
-            info('Using HEAD (--dev flag set).');
+            render(<<<'HTML'
+                <div class="mx-2 text-yellow-500 font-bold">
+                    [Option] Using HEAD (--dev flag set).
+                </div>
+            HTML);
 
             return 'HEAD';
         }
@@ -178,24 +232,47 @@ final class UpgradeCommand extends Command
         );
 
         if ($tags === []) {
-            error('No tags found on '.self::UPSTREAM_REPO.'. Use --dev to compare against HEAD.');
+            render(<<<'HTML'
+                <div class="mx-2 my-1 px-2 py-1 bg-red-600 text-white font-bold">
+                    No tags found on akrista/bizkit. Use --dev to compare against HEAD.
+                </div>
+            HTML);
 
             return null;
         }
 
         // Latest tag is first in the GitHub response
-        $latestTag = reset($tags);
+        $latestTag = (string) reset($tags);
 
         if ($currentVersion !== null && $currentVersion === $latestTag) {
-            outro(sprintf("You're already on the latest version (%s). Nothing to upgrade.", $latestTag));
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 my-1 px-2 py-1 bg-green-600 text-white font-bold">
+                    You're already on the latest version (%s).
+                </div>
+                <div class="mx-2 mt-1 text-gray-500">
+                    Nothing to upgrade.
+                </div>
+            HTML, $latestTag));
 
             return null;
         }
 
         if ($currentVersion !== null) {
-            info(sprintf('Current version: %s → Latest: %s', $currentVersion, $latestTag));
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 my-1">
+                    <span class="text-gray-500">Upgrade path:</span>
+                    <span class="text-red-500 font-bold">%s</span>
+                    <span class="text-gray-500">→</span>
+                    <span class="text-green-500 font-bold">%s</span>
+                </div>
+            HTML, $currentVersion, $latestTag));
         } else {
-            info('Latest upstream tag: '.$latestTag);
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 my-1">
+                    <span class="text-gray-500">Latest upstream tag:</span>
+                    <span class="text-green-500 font-bold">%s</span>
+                </div>
+            HTML, $latestTag));
         }
 
         return $latestTag;
@@ -303,41 +380,73 @@ final class UpgradeCommand extends Command
         $alreadyCount = count($grouped[FileStatus::AlreadyPresent->value] ?? []);
         $deletedCount = count($grouped[FileStatus::DeletedUpstream->value] ?? []);
 
-        $this->newLine();
-        info(sprintf(
-            'Summary: %d new · %d differs · %d already present · %d deleted upstream',
-            $newCount,
-            $differsCount,
-            $alreadyCount,
-            $deletedCount,
-        ));
-        $this->newLine();
+        render(sprintf(<<<'HTML'
+            <div class="mx-2 my-2">
+                <div class="font-bold text-gray-400 mb-1">Upgrade Summary:</div>
+                <table class="w-full">
+                    <tr>
+                        <td class="text-green-500 font-bold w-1/3">New Files</td>
+                        <td class="text-right text-green-500 font-bold">%d</td>
+                    </tr>
+                    <tr>
+                        <td class="text-yellow-500 font-bold">Differing Files</td>
+                        <td class="text-right text-yellow-500 font-bold">%d</td>
+                    </tr>
+                    <tr>
+                        <td class="text-red-500 font-bold">Deleted Upstream</td>
+                        <td class="text-right text-red-500 font-bold">%d</td>
+                    </tr>
+                    <tr>
+                        <td class="text-gray-500">Already Up-to-Date</td>
+                        <td class="text-right text-gray-500">%d</td>
+                    </tr>
+                </table>
+            </div>
+        HTML, $newCount, $differsCount, $deletedCount, $alreadyCount));
 
         if ($newCount > 0) {
-            $this->line('<fg=green>New files (will be applied automatically):</>');
+            render(<<<'HTML'
+                <div class="mx-2 mt-2">
+                    <div class="text-green-500 font-bold text-sm">New Files (will be applied automatically):</div>
+                </div>
+            HTML);
             foreach ($grouped[FileStatus::New->value] as $path) {
-                $this->line('  + '.$path);
+                render(sprintf(<<<'HTML'
+                    <div class="mx-4 text-green-400">
+                        <span>+</span> <span class="ml-1">%s</span>
+                    </div>
+                HTML, $path));
             }
-
-            $this->newLine();
         }
 
         if ($differsCount > 0) {
-            $this->line('<fg=yellow>Files that differ (you will decide for each):</>');
+            render(<<<'HTML'
+                <div class="mx-2 mt-2">
+                    <div class="text-yellow-500 font-bold text-sm">Files that differ (you will decide for each):</div>
+                </div>
+            HTML);
             foreach ($grouped[FileStatus::Differs->value] as $path) {
-                $this->line('  ~ '.$path);
+                render(sprintf(<<<'HTML'
+                    <div class="mx-4 text-yellow-400">
+                        <span>~</span> <span class="ml-1">%s</span>
+                    </div>
+                HTML, $path));
             }
-
-            $this->newLine();
         }
 
         if ($deletedCount > 0) {
-            $this->line('<fg=red>Deleted upstream (you will decide for each):</>');
+            render(<<<'HTML'
+                <div class="mx-2 mt-2">
+                    <div class="text-red-500 font-bold text-sm">Deleted upstream (you will decide for each):</div>
+                </div>
+            HTML);
             foreach ($grouped[FileStatus::DeletedUpstream->value] as $path) {
-                $this->line('  - '.$path);
+                render(sprintf(<<<'HTML'
+                    <div class="mx-4 text-red-400">
+                        <span>-</span> <span class="ml-1">%s</span>
+                    </div>
+                HTML, $path));
             }
-
-            $this->newLine();
         }
     }
 
@@ -372,7 +481,11 @@ final class UpgradeCommand extends Command
         }
 
         file_put_contents($localPath, $content);
-        $this->line('<fg=green>  ✓ Applied new file:</> '.$relativePath);
+        render(sprintf(<<<'HTML'
+            <div class="mx-2 text-green-500 font-semibold">
+                ✓ Applied: <span class="text-white">%s</span>
+            </div>
+        HTML, $relativePath));
     }
 
     /**
@@ -380,8 +493,11 @@ final class UpgradeCommand extends Command
      */
     private function walkUserThroughDiff(string $relativePath, string $upstreamContent): void
     {
-        $this->newLine();
-        $this->line('<fg=yellow>  ~ Differs:</> '.$relativePath);
+        render(sprintf(<<<'HTML'
+            <div class="mx-2 mt-2 px-1 bg-yellow-600 text-black font-bold">
+                ~ Differs: %s
+            </div>
+        HTML, $relativePath));
 
         // Write upstream content to a temp file for diffing
         $tempFile = tempnam(sys_get_temp_dir(), 'bizkit_upstream_');
@@ -410,9 +526,17 @@ final class UpgradeCommand extends Command
 
         if ($choice === 'take') {
             file_put_contents(base_path($relativePath), $upstreamContent);
-            $this->line('<fg=green>  ✓ Took upstream version:</> '.$relativePath);
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-green-500 font-semibold">
+                    ✓ Overwritten with upstream version: <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
         } else {
-            $this->line('<fg=gray>  – Kept local version:</> '.$relativePath);
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-gray-400">
+                    – Kept local version: <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
         }
     }
 
@@ -421,8 +545,11 @@ final class UpgradeCommand extends Command
      */
     private function walkUserThroughDeletion(string $relativePath): void
     {
-        $this->newLine();
-        warning(sprintf('  %s was deleted upstream.', $relativePath));
+        render(sprintf(<<<'HTML'
+            <div class="mx-2 mt-2 px-1 bg-red-600 text-white font-bold">
+                - Deleted Upstream: %s
+            </div>
+        HTML, $relativePath));
 
         $shouldDelete = confirm(
             label: sprintf('Delete %s from your project?', $relativePath),
@@ -431,9 +558,17 @@ final class UpgradeCommand extends Command
 
         if ($shouldDelete) {
             @unlink(base_path($relativePath));
-            $this->line('<fg=red>  ✓ Deleted:</> '.$relativePath);
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-red-500 font-semibold">
+                    ✓ Deleted: <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
         } else {
-            $this->line('<fg=gray>  – Kept local file:</> '.$relativePath);
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-gray-400">
+                    – Kept local file: <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
         }
     }
 
@@ -450,7 +585,11 @@ final class UpgradeCommand extends Command
         ];
 
         file_put_contents($versionFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
-        $this->line('<fg=green>  ✓ Updated</> '.self::VERSION_FILE.(' to '.$newVersion));
+        render(sprintf(<<<'HTML'
+            <div class="mx-2 mt-1 text-green-500 font-semibold">
+                ✓ Updated <span class="text-white">%s</span> to <span class="text-white">%s</span>
+            </div>
+        HTML, self::VERSION_FILE, $newVersion));
     }
 
     /**

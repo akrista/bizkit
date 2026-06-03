@@ -9,8 +9,10 @@ use App\Console\Commands\Upgrade\FileStatus;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Symfony\Component\Console\Attribute\AsCommand;
+use ZipArchive;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
@@ -43,6 +45,8 @@ final class UpgradeCommand extends Command
      */
     public function handle(): int
     {
+        Http::allowStrayRequests();
+
         info('🚀 bizkit upgrade');
         note('Comparing your project against the upstream skeleton at '.self::UPSTREAM_REPO);
 
@@ -94,7 +98,7 @@ final class UpgradeCommand extends Command
     }
 
     /**
-     * Run preflight checks: git available, gh authenticated, clean working tree.
+     * Run preflight checks: git available, clean working tree.
      */
     private function passesPreflight(): bool
     {
@@ -105,23 +109,8 @@ final class UpgradeCommand extends Command
             return false;
         }
 
-        // Check gh is available
-        if (! $this->commandExists('gh')) {
-            error('`gh` (GitHub CLI) is not available. Install it from https://cli.github.com and run `gh auth login`.');
-
-            return false;
-        }
-
-        // Check gh is authenticated
-        $authCheck = Process::run('gh auth status');
-        if (! $authCheck->successful()) {
-            error('`gh` is not authenticated. Run `gh auth login` and try again.');
-
-            return false;
-        }
-
         // Check for clean working tree
-        $statusCheck = Process::run('git status --porcelain');
+        $statusCheck = Process::run(['git', 'status', '--porcelain']);
         if (! $statusCheck->successful()) {
             error('Could not determine git status. Are you inside a git repository?');
 
@@ -169,14 +158,24 @@ final class UpgradeCommand extends Command
             return 'HEAD';
         }
 
-        $result = spin(
-            fn (): string => Process::run(
-                'gh api repos/'.self::UPSTREAM_REPO."/tags --jq '.[].name'",
-            )->output(),
+        $tags = spin(
+            function (): array {
+                $response = Http::withHeaders(array_merge([
+                    'User-Agent' => 'bizkit-upgrader/1.0',
+                    'Accept' => 'application/vnd.github+json',
+                ], $this->getAuthHeader()))->get('https://api.github.com/repos/'.self::UPSTREAM_REPO.'/tags');
+
+                if (! $response->successful()) {
+                    return [];
+                }
+
+                /** @var array<array{name: string}> $data */
+                $data = $response->json() ?? [];
+
+                return array_column($data, 'name');
+            },
             'Fetching available upstream tags…',
         );
-
-        $tags = array_filter(array_map(trim(...), explode("\n", $result)));
 
         if ($tags === []) {
             error('No tags found on '.self::UPSTREAM_REPO.'. Use --dev to compare against HEAD.');
@@ -209,31 +208,52 @@ final class UpgradeCommand extends Command
      */
     private function fetchUpstreamFiles(string $ref): array
     {
-        $result = Process::run(
-            'gh api repos/'.self::UPSTREAM_REPO.'/git/trees/'.$ref.'?recursive=1 --jq \'.tree[] | select(.type=="blob") | .path\'',
-        );
+        $url = 'https://api.github.com/repos/'.self::UPSTREAM_REPO.'/zipball/'.$ref;
 
-        if (! $result->successful()) {
+        $response = Http::withHeaders(array_merge([
+            'User-Agent' => 'bizkit-upgrader/1.0',
+        ], $this->getAuthHeader()))->get($url);
+
+        if (! $response->successful()) {
             return [];
         }
 
-        $paths = array_filter(array_map(trim(...), explode("\n", $result->output())));
+        $tempFile = tempnam(sys_get_temp_dir(), 'bizkit_zip_');
+        file_put_contents($tempFile, $response->body());
+
+        $zip = new ZipArchive;
         $files = [];
 
-        foreach ($paths as $path) {
-            // Skip binary/build artifacts and lock files — handled separately
-            if ($this->shouldSkipPath($path)) {
-                continue;
-            }
+        if ($zip->open($tempFile) === true) {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                $zipPath = $stat['name'];
 
-            $content = Process::run(
-                'gh api repos/'.self::UPSTREAM_REPO.'/contents/'.$path.'?ref='.$ref." --jq '.content' | base64 --decode",
-            );
+                $parts = explode('/', str_replace('\\', '/', $zipPath));
+                if (count($parts) <= 1) {
+                    continue;
+                }
 
-            if ($content->successful()) {
-                $files[$path] = $content->output();
+                array_shift($parts);
+                $relativePath = implode('/', $parts);
+
+                if (str_ends_with($zipPath, '/')) {
+                    continue;
+                }
+
+                if ($this->shouldSkipPath($relativePath)) {
+                    continue;
+                }
+
+                $content = $zip->getFromIndex($i);
+                if ($content !== false) {
+                    $files[$relativePath] = $content;
+                }
             }
+            $zip->close();
         }
+
+        @unlink($tempFile);
 
         return $files;
     }
@@ -367,7 +387,14 @@ final class UpgradeCommand extends Command
         $tempFile = tempnam(sys_get_temp_dir(), 'bizkit_upstream_');
         file_put_contents($tempFile, $upstreamContent);
 
-        $diff = Process::run('git diff --no-index -- '.base_path($relativePath).(' '.$tempFile));
+        $diff = Process::run([
+            'git',
+            'diff',
+            '--no-index',
+            '--',
+            base_path($relativePath),
+            $tempFile,
+        ]);
         $this->line($diff->output());
 
         @unlink($tempFile);
@@ -427,11 +454,34 @@ final class UpgradeCommand extends Command
     }
 
     /**
+     * Get the Authorization header for GitHub API requests if available.
+     *
+     * @return array<string, string>
+     */
+    private function getAuthHeader(): array
+    {
+        $token = env('GITHUB_TOKEN');
+
+        if (! $token && $this->commandExists('gh')) {
+            $tokenResult = Process::run(['gh', 'auth', 'token']);
+            if ($tokenResult->successful()) {
+                $token = mb_trim($tokenResult->output());
+            }
+        }
+
+        if ($token) {
+            return ['Authorization' => 'Bearer '.$token];
+        }
+
+        return [];
+    }
+
+    /**
      * Check whether a shell command is available on the system.
      */
     private function commandExists(string $command): bool
     {
-        $check = Process::run(PHP_OS_FAMILY === 'Windows' ? 'where '.$command : 'which '.$command);
+        $check = Process::run(PHP_OS_FAMILY === 'Windows' ? ['where', $command] : ['which', $command]);
 
         return $check->successful();
     }

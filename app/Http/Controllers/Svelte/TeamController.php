@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Svelte;
 
+use App\Actions\Teams\CreateTeam;
 use App\Enums\TeamRole;
+use App\Models\Membership;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Rules\TeamName;
 use App\Rules\UniqueTeamInvitation;
+use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +26,10 @@ final class TeamController extends Controller
 {
     public function index(Request $request): Response
     {
-        $teams = $request->user()->toUserTeams(includeCurrent: true)->map(fn ($userTeam) => [
+        $user = $request->user();
+        assert($user instanceof User);
+
+        $teams = $user->toUserTeams(includeCurrent: true)->map(fn ($userTeam): array => [
             'id' => $userTeam->id,
             'name' => $userTeam->name,
             'slug' => $userTeam->slug,
@@ -38,15 +44,21 @@ final class TeamController extends Controller
         ]);
     }
 
-    public function store(Request $request, \App\Actions\Teams\CreateTeam $createTeam): RedirectResponse
+    public function store(Request $request, CreateTeam $createTeam): RedirectResponse
     {
+        $user = $request->user();
+        assert($user instanceof User);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', new TeamName],
         ]);
+        /** @var array<string, mixed> $validated */
+        $teamName = $validated['name'] ?? '';
+        assert(is_string($teamName));
 
-        $team = $createTeam->handle($request->user(), $validated['name']);
+        $team = $createTeam->handle($user, $teamName);
 
-        return redirect()->route('svelte.teams.edit', ['team' => $team->slug])
+        return to_route('svelte.teams.edit', ['team' => $team->slug])
             ->with('success', __('Team created.'));
     }
 
@@ -55,25 +67,31 @@ final class TeamController extends Controller
         Gate::authorize('view', $team);
 
         $user = $request->user();
+        assert($user instanceof User);
         $permissions = $user->toTeamPermissions($team);
 
-        $members = $team->members()->get()->map(fn ($member) => [
-            'id' => $member->id,
-            'name' => $member->name,
-            'email' => $member->email,
-            'role' => $member->pivot->role->value,
-            'roleLabel' => $member->pivot->role->label(),
-        ])->values()->all();
+        $members = $team->members()->get()->map(function ($member): array {
+            $pivot = $member->getAttribute('pivot');
+            assert($pivot instanceof Membership);
+
+            return [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'role' => $pivot->role->value,
+                'roleLabel' => $pivot->role->label(),
+            ];
+        })->values()->all();
 
         $invitations = $team->invitations()
             ->whereNull('accepted_at')
             ->get()
-            ->map(fn ($invitation) => [
+            ->map(fn ($invitation): array => [
                 'code' => $invitation->code,
                 'email' => $invitation->email,
                 'role' => $invitation->role->value,
                 'roleLabel' => $invitation->role->label(),
-                'createdAt' => $invitation->created_at->toISOString(),
+                'createdAt' => ($invitation->created_at instanceof CarbonInterface) ? $invitation->created_at->toISOString() : '',
             ])
             ->values()
             ->all();
@@ -108,15 +126,15 @@ final class TeamController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', new TeamName],
         ]);
-
+        /** @var array<string, mixed> $validated */
         $team = DB::transaction(function () use ($team, $validated) {
-            $team = Team::whereKey($team->id)->lockForUpdate()->firstOrFail();
+            $team = Team::query()->whereKey($team->id)->lockForUpdate()->firstOrFail();
             $team->update(['name' => $validated['name']]);
 
             return $team;
         });
 
-        return redirect()->route('svelte.teams.edit', ['team' => $team->fresh()->slug])
+        return to_route('svelte.teams.edit', ['team' => $team->fresh()?->slug])
             ->with('success', __('Team updated.'));
     }
 
@@ -125,6 +143,7 @@ final class TeamController extends Controller
         Gate::authorize('delete', $team);
 
         $user = $request->user();
+        assert($user instanceof User);
 
         DB::transaction(function () use ($team, $user): void {
             $team->memberships()->delete();
@@ -133,13 +152,13 @@ final class TeamController extends Controller
 
             if ($user->current_team_id === $team->id) {
                 $fallback = $user->fallbackTeam($team);
-                if ($fallback) {
+                if ($fallback instanceof Team) {
                     $user->switchTeam($fallback);
                 }
             }
         });
 
-        return redirect()->route('svelte.teams.index')
+        return to_route('svelte.teams.index')
             ->with('success', __('Team deleted.'));
     }
 
@@ -150,11 +169,14 @@ final class TeamController extends Controller
         $validated = $request->validate([
             'role' => ['required', 'string', Rule::enum(TeamRole::class)],
         ]);
+        /** @var array<string, mixed> $validated */
+        $role = $validated['role'] ?? '';
+        assert(is_string($role));
 
         $team->memberships()
             ->where('user_id', $userId)
             ->firstOrFail()
-            ->update(['role' => TeamRole::from($validated['role'])]);
+            ->update(['role' => TeamRole::from($role)]);
 
         return back()->with('success', __('Member role updated.'));
     }
@@ -173,15 +195,23 @@ final class TeamController extends Controller
     {
         Gate::authorize('inviteMember', $team);
 
+        $user = $request->user();
+        assert($user instanceof User);
+
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255', new UniqueTeamInvitation($team)],
             'role' => ['required', 'string', Rule::enum(TeamRole::class)],
         ]);
+        /** @var array<string, mixed> $validated */
+        $email = $validated['email'] ?? '';
+        $role = $validated['role'] ?? '';
+        assert(is_string($email));
+        assert(is_string($role));
 
         $team->invitations()->create([
-            'email' => $validated['email'],
-            'role' => TeamRole::from($validated['role']),
-            'invited_by' => $request->user()->id,
+            'email' => $email,
+            'role' => TeamRole::from($role),
+            'invited_by' => $user->id,
             'expires_at' => now()->addDays(7),
         ]);
 
@@ -205,11 +235,13 @@ final class TeamController extends Controller
     public function acceptInvitation(Request $request, TeamInvitation $invitation): RedirectResponse
     {
         $user = $request->user();
+        assert($user instanceof User);
 
         $this->validateInvitation($user, $invitation);
 
         DB::transaction(function () use ($user, $invitation): void {
             $team = $invitation->team;
+            assert($team instanceof Team);
 
             $team->memberships()->firstOrCreate(
                 ['user_id' => $user->id],
@@ -221,8 +253,19 @@ final class TeamController extends Controller
             $user->switchTeam($team);
         });
 
-        return redirect()->route('svelte.dashboard')
+        return to_route('svelte.dashboard')
             ->with('success', __('You have joined the team.'));
+    }
+
+    public function switch(Request $request, Team $team): RedirectResponse
+    {
+        $user = $request->user();
+        assert($user instanceof User);
+
+        abort_unless($user->belongsToTeam($team), 403);
+        $user->switchTeam($team);
+
+        return back();
     }
 
     /**

@@ -7,13 +7,25 @@ namespace App\Http\Middleware;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\UserTeam;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
 {
-    protected $rootView = 'svelte-app';
+    public function rootView(Request $request): string
+    {
+        if ($request->is('react') || $request->is('react/*')) {
+            return 'react-app';
+        }
+
+        if ($request->is('vue') || $request->is('vue/*')) {
+            return 'vue-app';
+        }
+
+        return 'svelte-app';
+    }
 
     public function version(Request $request): ?string
     {
@@ -35,9 +47,9 @@ final class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
-            'current_team' => fn () => $this->resolveCurrentTeam($request),
-            'teams' => fn () => $this->resolveTeams($request),
-            'membership' => fn () => $this->resolveMembership($request),
+            'current_team' => fn (): ?array => $this->resolveCurrentTeam($request),
+            'teams' => fn (): Collection => $this->resolveTeams($request),
+            'membership' => fn (): ?array => $this->resolveMembership($request),
         ];
     }
 
@@ -57,7 +69,7 @@ final class HandleInertiaRequests extends Middleware
             'name' => $user->name,
             'email' => $user->email,
             'initials' => $user->initials(),
-            'email_verified_at' => $user->email_verified_at?->toISOString(),
+            'email_verified_at' => ($user->email_verified_at instanceof CarbonInterface) ? $user->email_verified_at->toISOString() : null,
             'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
             'current_team_id' => $user->current_team_id,
         ];
@@ -91,10 +103,14 @@ final class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         if (! $user instanceof User) {
-            return collect();
+            /** @var Collection<int, array<string, mixed>> $emptyCollection */
+            $emptyCollection = collect();
+
+            return $emptyCollection;
         }
 
-        return $user->toUserTeams(includeCurrent: true)->map(fn (UserTeam $userTeam): array => [
+        /** @var Collection<int, array<string, mixed>> $resolvedTeams */
+        $resolvedTeams = $user->toUserTeams(includeCurrent: true)->map(fn (UserTeam $userTeam): array => [
             'id' => $userTeam->id,
             'name' => $userTeam->name,
             'slug' => $userTeam->slug,
@@ -103,6 +119,8 @@ final class HandleInertiaRequests extends Middleware
             'roleLabel' => $userTeam->roleLabel,
             'isCurrent' => $userTeam->isCurrent,
         ]);
+
+        return $resolvedTeams;
     }
 
     /**

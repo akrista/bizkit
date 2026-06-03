@@ -6,6 +6,8 @@ namespace App\Console\Commands;
 
 use App\Console\Commands\Upgrade\FileClassifier;
 use App\Console\Commands\Upgrade\FileStatus;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -20,6 +22,10 @@ use function Laravel\Prompts\spin;
 use function Laravel\Prompts\warning;
 
 #[AsCommand(name: 'bizkit:upgrade')]
+#[Description('Upgrade your project by pulling in changes from the upstream bizkit skeleton.')]
+#[Signature('bizkit:upgrade
+                            {--dev : Compare against HEAD instead of a stable tag}
+                            {--dry-run : Show what would change without applying anything}')]
 final class UpgradeCommand extends Command
 {
     /**
@@ -31,22 +37,6 @@ final class UpgradeCommand extends Command
      * The local version tracking file.
      */
     private const string VERSION_FILE = 'bizkit.json';
-
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'bizkit:upgrade
-                            {--dev : Compare against HEAD instead of a stable tag}
-                            {--dry-run : Show what would change without applying anything}';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Upgrade your project by pulling in changes from the upstream bizkit skeleton.';
 
     /**
      * Execute the console command.
@@ -181,12 +171,12 @@ final class UpgradeCommand extends Command
 
         $result = spin(
             fn (): string => Process::run(
-                'gh api repos/'.self::UPSTREAM_REPO.'/tags --jq \'.[].name\'',
+                'gh api repos/'.self::UPSTREAM_REPO."/tags --jq '.[].name'",
             )->output(),
             'Fetching available upstream tags…',
         );
 
-        $tags = array_filter(array_map('trim', explode("\n", $result)));
+        $tags = array_filter(array_map(trim(...), explode("\n", $result)));
 
         if ($tags === []) {
             error('No tags found on '.self::UPSTREAM_REPO.'. Use --dev to compare against HEAD.');
@@ -198,15 +188,15 @@ final class UpgradeCommand extends Command
         $latestTag = reset($tags);
 
         if ($currentVersion !== null && $currentVersion === $latestTag) {
-            outro("You're already on the latest version ({$latestTag}). Nothing to upgrade.");
+            outro(sprintf("You're already on the latest version (%s). Nothing to upgrade.", $latestTag));
 
             return null;
         }
 
         if ($currentVersion !== null) {
-            info("Current version: {$currentVersion} → Latest: {$latestTag}");
+            info(sprintf('Current version: %s → Latest: %s', $currentVersion, $latestTag));
         } else {
-            info("Latest upstream tag: {$latestTag}");
+            info('Latest upstream tag: '.$latestTag);
         }
 
         return $latestTag;
@@ -227,7 +217,7 @@ final class UpgradeCommand extends Command
             return [];
         }
 
-        $paths = array_filter(array_map('trim', explode("\n", $result->output())));
+        $paths = array_filter(array_map(trim(...), explode("\n", $result->output())));
         $files = [];
 
         foreach ($paths as $path) {
@@ -237,7 +227,7 @@ final class UpgradeCommand extends Command
             }
 
             $content = Process::run(
-                'gh api repos/'.self::UPSTREAM_REPO.'/contents/'.$path.'?ref='.$ref.' --jq \'.content\' | base64 --decode',
+                'gh api repos/'.self::UPSTREAM_REPO.'/contents/'.$path.'?ref='.$ref." --jq '.content' | base64 --decode",
             );
 
             if ($content->successful()) {
@@ -306,24 +296,27 @@ final class UpgradeCommand extends Command
         if ($newCount > 0) {
             $this->line('<fg=green>New files (will be applied automatically):</>');
             foreach ($grouped[FileStatus::New->value] as $path) {
-                $this->line("  + {$path}");
+                $this->line('  + '.$path);
             }
+
             $this->newLine();
         }
 
         if ($differsCount > 0) {
             $this->line('<fg=yellow>Files that differ (you will decide for each):</>');
             foreach ($grouped[FileStatus::Differs->value] as $path) {
-                $this->line("  ~ {$path}");
+                $this->line('  ~ '.$path);
             }
+
             $this->newLine();
         }
 
         if ($deletedCount > 0) {
             $this->line('<fg=red>Deleted upstream (you will decide for each):</>');
             foreach ($grouped[FileStatus::DeletedUpstream->value] as $path) {
-                $this->line("  - {$path}");
+                $this->line('  - '.$path);
             }
+
             $this->newLine();
         }
     }
@@ -359,7 +352,7 @@ final class UpgradeCommand extends Command
         }
 
         file_put_contents($localPath, $content);
-        $this->line("<fg=green>  ✓ Applied new file:</> {$relativePath}");
+        $this->line('<fg=green>  ✓ Applied new file:</> '.$relativePath);
     }
 
     /**
@@ -368,19 +361,19 @@ final class UpgradeCommand extends Command
     private function walkUserThroughDiff(string $relativePath, string $upstreamContent): void
     {
         $this->newLine();
-        $this->line("<fg=yellow>  ~ Differs:</> {$relativePath}");
+        $this->line('<fg=yellow>  ~ Differs:</> '.$relativePath);
 
         // Write upstream content to a temp file for diffing
         $tempFile = tempnam(sys_get_temp_dir(), 'bizkit_upstream_');
         file_put_contents($tempFile, $upstreamContent);
 
-        $diff = Process::run('git diff --no-index -- '.base_path($relativePath)." {$tempFile}");
+        $diff = Process::run('git diff --no-index -- '.base_path($relativePath).(' '.$tempFile));
         $this->line($diff->output());
 
         @unlink($tempFile);
 
         $choice = select(
-            label: "What would you like to do with {$relativePath}?",
+            label: sprintf('What would you like to do with %s?', $relativePath),
             options: [
                 'keep' => 'Keep my version (skip)',
                 'take' => 'Take upstream version (overwrites your changes)',
@@ -390,9 +383,9 @@ final class UpgradeCommand extends Command
 
         if ($choice === 'take') {
             file_put_contents(base_path($relativePath), $upstreamContent);
-            $this->line("<fg=green>  ✓ Took upstream version:</> {$relativePath}");
+            $this->line('<fg=green>  ✓ Took upstream version:</> '.$relativePath);
         } else {
-            $this->line("<fg=gray>  – Kept local version:</> {$relativePath}");
+            $this->line('<fg=gray>  – Kept local version:</> '.$relativePath);
         }
     }
 
@@ -402,18 +395,18 @@ final class UpgradeCommand extends Command
     private function walkUserThroughDeletion(string $relativePath): void
     {
         $this->newLine();
-        warning("  {$relativePath} was deleted upstream.");
+        warning(sprintf('  %s was deleted upstream.', $relativePath));
 
         $shouldDelete = confirm(
-            label: "Delete {$relativePath} from your project?",
+            label: sprintf('Delete %s from your project?', $relativePath),
             default: false,
         );
 
         if ($shouldDelete) {
             @unlink(base_path($relativePath));
-            $this->line("<fg=red>  ✓ Deleted:</> {$relativePath}");
+            $this->line('<fg=red>  ✓ Deleted:</> '.$relativePath);
         } else {
-            $this->line("<fg=gray>  – Kept local file:</> {$relativePath}");
+            $this->line('<fg=gray>  – Kept local file:</> '.$relativePath);
         }
     }
 
@@ -430,7 +423,7 @@ final class UpgradeCommand extends Command
         ];
 
         file_put_contents($versionFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
-        $this->line('<fg=green>  ✓ Updated</> '.self::VERSION_FILE." to {$newVersion}");
+        $this->line('<fg=green>  ✓ Updated</> '.self::VERSION_FILE.(' to '.$newVersion));
     }
 
     /**
@@ -438,7 +431,7 @@ final class UpgradeCommand extends Command
      */
     private function commandExists(string $command): bool
     {
-        $check = Process::run(PHP_OS_FAMILY === 'Windows' ? "where {$command}" : "which {$command}");
+        $check = Process::run(PHP_OS_FAMILY === 'Windows' ? 'where '.$command : 'which '.$command);
 
         return $check->successful();
     }

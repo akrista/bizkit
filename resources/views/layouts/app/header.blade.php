@@ -87,6 +87,7 @@
             </flux:toast.group>
         @endpersist
 
+        @include('partials.framework-switcher')
         @fluxScripts
     </body>
 </html>

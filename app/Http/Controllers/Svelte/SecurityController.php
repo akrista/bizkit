@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Svelte;
 
 use App\Concerns\PasswordValidationRules;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,6 +23,7 @@ final class SecurityController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user();
+        assert($user instanceof User);
 
         $twoFactorData = null;
 
@@ -32,11 +34,15 @@ final class SecurityController extends Controller
                 $twoFactorEnabled = false;
             }
 
+            $recoveryCodesRaw = is_string($user->two_factor_recovery_codes)
+                ? decrypt($user->two_factor_recovery_codes)
+                : null;
+
             $twoFactorData = [
                 'enabled' => $twoFactorEnabled,
                 'requiresConfirmation' => Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm'),
-                'recoveryCodes' => $twoFactorEnabled
-                    ? json_decode(decrypt($user->two_factor_recovery_codes), true)
+                'recoveryCodes' => ($twoFactorEnabled && is_string($recoveryCodesRaw))
+                    ? json_decode($recoveryCodesRaw, true)
                     : null,
             ];
         }
@@ -48,13 +54,18 @@ final class SecurityController extends Controller
                 ->select(['id', 'name', 'credential', 'created_at', 'last_used_at'])
                 ->latest()
                 ->get()
-                ->map(fn ($passkey) => [
-                    'id' => $passkey->id,
-                    'name' => $passkey->name,
-                    'authenticator' => $passkey->authenticator,
-                    'created_at' => $passkey->created_at->toISOString(),
-                    'last_used_at' => $passkey->last_used_at?->toISOString(),
-                ])
+                ->map(function ($passkey): array {
+                    $createdAt = $passkey->getAttribute('created_at');
+                    $lastUsedAt = $passkey->getAttribute('last_used_at');
+
+                    return [
+                        'id' => $passkey->getAttribute('id'),
+                        'name' => $passkey->getAttribute('name'),
+                        'authenticator' => $passkey->getAttribute('authenticator'),
+                        'created_at' => ($createdAt instanceof Carbon) ? $createdAt->toISOString() : '',
+                        'last_used_at' => ($lastUsedAt instanceof Carbon) ? $lastUsedAt->toISOString() : null,
+                    ];
+                })
                 ->values()
                 ->all();
         }
@@ -70,13 +81,19 @@ final class SecurityController extends Controller
      */
     public function updatePassword(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        assert($user instanceof User);
+
         $validated = $request->validate([
             'current_password' => $this->currentPasswordRules(),
             'password' => $this->passwordRules(),
         ]);
+        /** @var array<string, mixed> $validated */
+        $password = $validated['password'] ?? '';
+        assert(is_string($password));
 
-        Auth::user()->update([
-            'password' => $validated['password'],
+        $user->update([
+            'password' => $password,
         ]);
 
         return back()->with('success', __('Password updated.'));

@@ -2,6 +2,7 @@
     "recommendations": [
         "laravel.vscode-laravel",
         "bmewburn.vscode-intelephense-client",
-        "DEVSENSE.phptools-vscode"
+        "DEVSENSE.phptools-vscode",
+        "EditorConfig.EditorConfig"
     ]
 }

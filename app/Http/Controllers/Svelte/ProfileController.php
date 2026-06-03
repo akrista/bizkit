@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Svelte;
 
 use App\Concerns\ProfileValidationRules;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,20 +19,29 @@ final class ProfileController extends Controller
 
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        $tempUser = $user;
+        assert($user instanceof User);
+
+        $mustVerify = in_array(MustVerifyEmail::class, class_implements($user), true);
+
+        /** @var MustVerifyEmail $verifiedUser */
+        $verifiedUser = $tempUser;
+
         return Inertia::render('settings/profile', [
             'status' => Session::get('status'),
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'hasUnverifiedEmail' => $request->user() instanceof MustVerifyEmail
-                && ! $request->user()->hasVerifiedEmail(),
+            'mustVerifyEmail' => $mustVerify,
+            'hasUnverifiedEmail' => $mustVerify && ! $verifiedUser->hasVerifiedEmail(),
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
+        assert($user instanceof User);
 
         $validated = $request->validate($this->profileRules($user->id));
-
+        /** @var array<string, mixed> $validated */
         $user->fill($validated);
 
         if ($user->isDirty('email')) {
@@ -46,12 +56,17 @@ final class ProfileController extends Controller
     public function sendVerification(Request $request): RedirectResponse
     {
         $user = $request->user();
+        $tempUser = $user;
+        assert($user instanceof User);
 
-        if ($user->hasVerifiedEmail()) {
+        /** @var MustVerifyEmail $verifiedUser */
+        $verifiedUser = $tempUser;
+
+        if ($verifiedUser->hasVerifiedEmail()) {
             return back();
         }
 
-        $user->sendEmailVerificationNotification();
+        $verifiedUser->sendEmailVerificationNotification();
 
         return back()->with('success', __('Verification link sent.'));
     }

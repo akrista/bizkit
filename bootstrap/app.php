@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetTeamUrlDefaults;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,12 +18,18 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function (): void {
             Route::middleware('web')
                 ->group(base_path('routes/svelte.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/react.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/vue.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             SetTeamUrlDefaults::class,
-            App\Http\Middleware\HandleInertiaRequests::class,
+            HandleInertiaRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

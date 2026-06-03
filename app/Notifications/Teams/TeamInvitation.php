@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Notifications\Teams;
 
+use App\Models\Team;
 use App\Models\TeamInvitation as TeamInvitationModel;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -39,6 +41,8 @@ final class TeamInvitation extends Notification implements ShouldQueue
     {
         $team = $this->invitation->team;
         $inviter = $this->invitation->inviter;
+        assert($team instanceof Team);
+        assert($inviter instanceof User);
 
         return (new MailMessage)
             ->subject(__("You've been invited to join :teamName", ['teamName' => $team->name]))
@@ -56,10 +60,13 @@ final class TeamInvitation extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
+        $team = $this->invitation->team;
+        assert($team instanceof Team);
+
         return [
             'invitation_id' => $this->invitation->id,
             'team_id' => $this->invitation->team_id,
-            'team_name' => $this->invitation->team->name,
+            'team_name' => $team->name,
             'role' => $this->invitation->role->value,
         ];
     }

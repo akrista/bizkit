@@ -8,12 +8,11 @@ use App\Http\Controllers\Svelte\SecurityController;
 use App\Http\Controllers\Svelte\TeamController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
 Route::prefix('svelte')->name('svelte.')->group(function (): void {
-    Route::get('/', function () {
-        return \Inertia\Inertia::render('Welcome');
-    })->name('welcome');
+    Route::get('/', fn () => Inertia::render('Welcome'))->name('welcome');
 
     Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('dashboard', DashboardController::class)->name('dashboard');

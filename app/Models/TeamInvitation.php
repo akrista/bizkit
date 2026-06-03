@@ -10,8 +10,18 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * @property string $code
+ * @property int $team_id
+ * @property string $email
+ * @property TeamRole $role
+ * @property int $invited_by
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $accepted_at
+ */
 #[Fillable(['team_id', 'email', 'role', 'invited_by', 'expires_at', 'accepted_at'])]
 final class TeamInvitation extends Model
 {
@@ -31,7 +41,7 @@ final class TeamInvitation extends Model
     /**
      * Get the user who sent the invitation.
      *
-     * @return BelongsTo<Model, $this>
+     * @return BelongsTo<User, $this>
      */
     public function inviter(): BelongsTo
     {

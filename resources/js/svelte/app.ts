@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/svelte';
+import { mount } from 'svelte';
 import AppLayout from '@/layouts/AppLayout.svelte';
 import AuthLayout from '@/layouts/AuthLayout.svelte';
 import SettingsLayout from '@/layouts/settings/Layout.svelte';
@@ -14,22 +15,16 @@ createInertiaApp({
         return pages[`./pages/${name}.svelte`];
     },
     setup({ el, App, props }) {
-        new App({ target: el, props });
+        mount(App, { target: el, props });
     },
-    layout: (page) => {
-        const Layout = page.default.layout;
-
-        if (typeof Layout === 'function') {
-            return Layout(page.props);
-        }
-
+    layout: (name) => {
         switch (true) {
-            case page.default.name === 'Welcome':
+            case name === 'Welcome':
                 return null;
-            case page.default.name?.startsWith('auth/'):
+            case name.startsWith('auth/'):
                 return AuthLayout;
-            case page.default.name?.startsWith('settings/'):
-            case page.default.name?.startsWith('teams/'):
+            case name.startsWith('settings/'):
+            case name.startsWith('teams/'):
                 return [AppLayout, SettingsLayout];
             default:
                 return AppLayout;

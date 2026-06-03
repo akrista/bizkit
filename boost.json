@@ -18,11 +18,14 @@
     "skills": [
         "fortify-development",
         "laravel-best-practices",
+        "wayfinder-development",
         "fluxui-development",
         "livewire-development",
         "pest-testing",
+        "inertia-react-development",
         "inertia-svelte-development",
         "tailwindcss-development",
+        "bizkit-upgrade",
         "deploying-laravel-cloud"
     ]
 }

@@ -13,15 +13,15 @@ namespace App\Console\Commands\Upgrade;
  *   - differs:          file exists but content differs from upstream.
  *   - deleted-upstream: file exists locally but was removed upstream.
  */
-final class FileClassifier
+final readonly class FileClassifier
 {
     /**
      * @param  array<string, string>  $upstreamFiles  Map of relative path => raw content from upstream.
      * @param  string  $localBasePath  Absolute path to the local project root.
      */
     public function __construct(
-        private readonly array $upstreamFiles,
-        private readonly string $localBasePath,
+        private array $upstreamFiles,
+        private string $localBasePath,
     ) {}
 
     /**

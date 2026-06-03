@@ -24,7 +24,8 @@ final readonly class UniqueTeamInvitation implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $email = mb_strtolower((string) $value);
+        $valueStr = is_string($value) ? $value : '';
+        $email = mb_strtolower($valueStr);
 
         $isMember = $this->team->members()
             ->whereRaw('LOWER(email) = ?', [$email])

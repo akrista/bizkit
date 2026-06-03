@@ -25,7 +25,7 @@ return new class extends Migration
         Schema::create('team_members', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('team_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->string('role');
             $table->timestamps();
 
@@ -38,7 +38,7 @@ return new class extends Migration
             $table->foreignId('team_id')->constrained()->cascadeOnDelete();
             $table->string('email');
             $table->string('role');
-            $table->foreignId('invited_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('invited_by')->constrained('users')->cascadeOnDelete();
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('accepted_at')->nullable();
             $table->timestamps();

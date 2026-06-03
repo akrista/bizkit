@@ -34,7 +34,8 @@ yarn-error.log
 *mcp.json
 opencode.json
 /tmp
-
+_ide_helper*
+.phpstorm.meta.php
 **/caddy
 frankenphp
 frankenphp-worker.php

@@ -29,10 +29,7 @@ trait GeneratesUniqueTeamSlugs
 
         $maxSuffix = $existingSlugs
             ->map(function (mixed $slug) use ($defaultSlug): ?int {
-                if (! is_string($slug)) {
-                    return null;
-                }
-
+                $slug = is_string($slug) ? $slug : '';
                 if ($slug === $defaultSlug) {
                     return 0;
                 }

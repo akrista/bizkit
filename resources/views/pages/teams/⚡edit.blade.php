@@ -1,9 +1,9 @@
 <?php
 
+use App\Data\TeamPermissions;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Rules\TeamName;
-use App\Support\TeamPermissions;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -62,7 +62,7 @@ new class extends Component
         $this->redirectRoute('teams.edit', ['team' => $this->teamModel->fresh()->slug], navigate: true);
     }
 
-    public function updateMember(int $userId, string $role): void
+    public function updateMember(string $userId, string $role): void
     {
         Gate::authorize('updateMember', $this->teamModel);
 

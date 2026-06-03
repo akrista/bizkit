@@ -13,14 +13,24 @@ use Illuminate\Translation\PotentiallyTranslatedString;
 final class TeamName implements ValidationRule
 {
     /**
+     * @var array<int, string>|null
+     */
+    private ?array $names = null;
+
+    /**
      * Run the validation rule.
      *
      * @param  Closure(string, ?string=): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $valueStr = is_string($value) ? $value : '';
-        $name = mb_strtolower(mb_trim($valueStr));
+        if (! is_string($value)) {
+            $fail(__('The team name must be a string.'));
+
+            return;
+        }
+
+        $name = mb_strtolower(mb_trim($value));
 
         if (in_array($name, $this->reservedNames(), true)) {
             $fail(__('This team name is reserved and cannot be used.'));
@@ -34,9 +44,8 @@ final class TeamName implements ValidationRule
      */
     private function reservedNames(): array
     {
-        /** @var array<int, string> $reserved */
-        $reserved = once(fn () => collect($this->routesPrefixes())
-            ->merge([
+        if ($this->names === null) {
+            $this->names = array_merge($this->routesPrefixes(), [
                 '300',
                 '302',
                 '400',
@@ -365,13 +374,12 @@ final class TeamName implements ValidationRule
                 'www8',
                 'www9',
                 'zones',
-            ])
-            ->unique()
-            ->sort()
-            ->values()
-            ->all());
+            ]);
+            $this->names = array_values(array_unique($this->names));
+            sort($this->names);
+        }
 
-        return $reserved;
+        return $this->names;
     }
 
     /**

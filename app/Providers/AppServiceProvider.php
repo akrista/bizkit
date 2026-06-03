@@ -49,7 +49,6 @@ final class AppServiceProvider extends ServiceProvider
         }
 
         Date::use(CarbonImmutable::class);
-
         Http::preventStrayRequests();
 
         DB::prohibitDestructiveCommands(
@@ -58,11 +57,10 @@ final class AppServiceProvider extends ServiceProvider
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
-                ->letters()
                 ->mixedCase()
+                ->letters()
                 ->numbers()
                 ->symbols()
-                ->max(255)
                 ->uncompromised()
             : null,
         );

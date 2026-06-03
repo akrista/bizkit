@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /**
+ * @property TeamRole $role
  * @property int $team_id
  * @property int $user_id
- * @property TeamRole $role
  */
 #[Fillable(['team_id', 'user_id', 'role'])]
 #[Table(name: 'team_members')]

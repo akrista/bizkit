@@ -1,13 +1,8 @@
 {
     "agents": [
-        "amp",
         "claude_code",
-        "codex",
-        "cursor",
         "gemini",
         "copilot",
-        "junie",
-        "kiro",
         "opencode"
     ],
     "cloud": true,
@@ -16,14 +11,15 @@
     "nightwatch": false,
     "sail": false,
     "skills": [
+        "ai-sdk-development",
         "fortify-development",
         "laravel-best-practices",
-        "wayfinder-development",
+        "configuring-horizon",
+        "pennant-development",
+        "pulse-development",
         "fluxui-development",
         "livewire-development",
         "pest-testing",
-        "inertia-react-development",
-        "inertia-svelte-development",
         "tailwindcss-development",
         "bizkit-upgrade",
         "deploying-laravel-cloud"

@@ -15,12 +15,12 @@ use Illuminate\Support\Str;
 
 /**
  * @property string $code
- * @property int $team_id
  * @property string $email
- * @property TeamRole $role
- * @property int $invited_by
+ * @property int $team_id
+ * @property int|null $invited_by
  * @property Carbon|null $expires_at
  * @property Carbon|null $accepted_at
+ * @property TeamRole $role
  */
 #[Fillable(['team_id', 'email', 'role', 'invited_by', 'expires_at', 'accepted_at'])]
 final class TeamInvitation extends Model

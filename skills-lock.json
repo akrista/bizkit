@@ -13,7 +13,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "laravel-cloud/skills/deploying-laravel-cloud/SKILL.md",
-      "computedHash": "4ef6d41e600b3908025d7351241271c8be3f5ece97b04ed6cd78dbe763391f3a"
+      "computedHash": "3b446e6e48f403897f7a163b8a57db6495ca018413957a26121b3e38f2b9ee54"
     },
     "starter-kit-upgrade": {
       "source": "laravel/agent-skills",

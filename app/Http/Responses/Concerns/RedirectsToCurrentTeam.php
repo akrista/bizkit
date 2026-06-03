@@ -23,7 +23,8 @@ trait RedirectsToCurrentTeam
     protected function currentTeam(Request $request): Team
     {
         $user = $request->user();
-        assert($user instanceof User);
+
+        abort_unless($user instanceof User, 403);
 
         $team = $user->currentTeam ?? $user->personalTeam();
 

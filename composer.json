@@ -3,14 +3,12 @@
     "name": "akrista/bizkit",
     "type": "project",
     "description": "The official Laravel starter kit for Livewire.",
-    "keywords": [
-        "laravel",
-        "framework"
-    ],
+    "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
         "php": "^8.3",
         "dedoc/scramble": "^0.13.26",
+        "filament/filament": "^5.0",
         "laravel/ai": "^0.7.2",
         "laravel/chisel": "^0.1.1",
         "laravel/fortify": "^1.37.2",
@@ -118,7 +116,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php artisan filament:upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",

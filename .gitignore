@@ -33,6 +33,9 @@ yarn-error.log
 /.github/skills
 *mcp.json
 opencode.json
+AGENTS.md
+CLAUDE.md
+GEMINI.md
 /tmp
 _ide_helper*
 .phpstorm.meta.php

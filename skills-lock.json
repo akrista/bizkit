@@ -15,6 +15,18 @@
       "skillPath": "laravel-cloud/skills/deploying-laravel-cloud/SKILL.md",
       "computedHash": "3b446e6e48f403897f7a163b8a57db6495ca018413957a26121b3e38f2b9ee54"
     },
+    "no-ai-slop": {
+      "source": "realrossmanngroup/no_ai_slop_writing_rules",
+      "sourceType": "github",
+      "skillPath": "skills/no-ai-slop/SKILL.md",
+      "computedHash": "4236336f28ec17941ed36217ced0f1452328cc8f2d1e476ddf9b054cb17fd670"
+    },
+    "rossmann-voice": {
+      "source": "realrossmanngroup/no_ai_slop_writing_rules",
+      "sourceType": "github",
+      "skillPath": "skills/rossmann-voice/SKILL.md",
+      "computedHash": "2fb42bd6bf43fea7705a509e4a8c92543d4f794359fa1b39449f08866ed72a41"
+    },
     "starter-kit-upgrade": {
       "source": "laravel/agent-skills",
       "ref": "main",

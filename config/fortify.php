@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\FilamentMode;
 use Laravel\Fortify\Features;
 
 return [
@@ -88,7 +89,7 @@ return [
     |
     */
 
-    'prefix' => '',
+    'prefix' => FilamentMode::fromConfig()->isApp() ? 'fortify' : '',
 
     'domain' => null,
 

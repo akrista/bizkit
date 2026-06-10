@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Enums\FilamentMode;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
+use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -21,15 +24,47 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-final class AdminPanelProvider extends PanelProvider
+final class FilamentPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         return $panel
             ->default()
-            ->id('admin')
-            ->path('admin')
-            ->login()
+            ->id('filament')
+            ->path(FilamentMode::fromConfig()->panelPath())
+            ->profile(
+                // page: EditProfile::class,
+                isSimple: false
+            )
+            ->multiFactorAuthentication([
+                AppAuthentication::make()
+                    ->brandName(config('app.name'))
+                    ->codeWindow(6)
+                    ->recoverable()
+                    ->regenerableRecoveryCodes(),
+                EmailAuthentication::make()
+                    ->codeExpiryMinutes(4),
+            ], isRequired: false)
+            ->login(
+            // action: Login::class
+            )
+            ->loginRouteSlug('login')
+            ->registration(
+            // action: Register::class
+            )
+            ->registrationRouteSlug('register')
+            ->passwordReset()
+            // ->passwordResetRoutePrefix('password-reset')
+            // ->passwordResetRequestRouteSlug('request')
+            // ->passwordResetRouteSlug('reset')
+            ->emailVerification()
+            ->emailVerificationRouteSlug('verify')
+            ->emailVerificationRoutePrefix('email-verification')
+            ->emailVerificationPromptRouteSlug('prompt')
+            // ->emailChangeVerification()
+            // ->emailChangeVerificationRoutePrefix('email-change-verification')
+            // ->emailChangeVerificationRouteSlug('verify')
+            ->revealablePasswords(true)
             ->colors([
                 'primary' => Color::Amber,
             ])

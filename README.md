@@ -16,7 +16,7 @@ Bizkit is a personal Laravel starter kit built for visual excellence, modern rea
 - **Octane with FrankenPHP**: Pre-configured high-performance application serving with FrankenPHP.
 - **Reverb**: Native, lightning-fast WebSockets for real-time Laravel broadcasting.
 - **Horizon**: Beautiful Redis queue monitor dashboard to oversee job processing.
-- **Pulse**: Real-time application performance and resource monitoring.
+- **Pulse**: Real-time application performance and resource monitoring. **Database support:** MySQL, MariaDB, or PostgreSQL only — Pulse is not compatible with SQLite/MSSQL.
 
 ### 🛡️ Authentication & Security
 - **Robust Authentication**: Powered by **Laravel Fortify** featuring secure registration, email verification, and password resets.

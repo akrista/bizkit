@@ -327,6 +327,7 @@ final class UpgradeCommand extends Command
                     $files[$relativePath] = $content;
                 }
             }
+
             $zip->close();
         }
 

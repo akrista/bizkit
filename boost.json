@@ -23,6 +23,7 @@
         "pest-testing",
         "tailwindcss-development",
         "bizkit-upgrade",
-        "deploying-laravel-cloud"
+        "deploying-laravel-cloud",
+        "tiger-style"
     ]
 }

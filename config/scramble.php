@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
+use App\Http\Middleware\AuthorizeApiDocs;
 use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
 
 return [
@@ -34,6 +34,16 @@ return [
      */
     'export_path' => 'api.json',
 
+    /*
+     * Cache configuration for the generated OpenAPI document.
+     *
+     * Use `scramble:cache` to warm the cache and `scramble:clear` to invalidate it.
+     */
+    'cache' => [
+        'key' => 'scramble.openapi',
+        'store' => 'file',
+    ],
+
     'info' => [
         /*
          * API version.
@@ -50,7 +60,7 @@ return [
         'title' => null,
     ],
 
-    'renderer' => 'elements',
+    'renderer' => 'scalar',
 
     'renderers' => [
         /*
@@ -72,11 +82,22 @@ return [
         'scalar' => [
             'view' => 'scramble::scalar',
             'cdn' => 'https://cdn.jsdelivr.net/npm/@scalar/api-reference',
-            'theme' => 'laravel',
+            'theme' => 'laravel', // ? laravel, alternate, default, moon, purple, solarized, bluePlanet, saturn, kepler, mars, deepSpace, laserwave, none
+            'layout' => 'modern',
             'proxyUrl' => 'https://proxy.scalar.com',
+            'showSidebar' => true,
+            'hideModels' => false,
+            'hideDownloadButton' => false,
+            'hideTestRequestButton' => false,
+            'hideSearch' => false,
             'darkMode' => false,
+            'forceDarkModeState' => 'dark',
+            'hideDarkModeToggle' => false,
+            'searchHotKey' => 'k',
+            'withDefaultFonts' => true,
+            'defaultOpenAllTags' => false,
             'showDeveloperTools' => 'never',
-            'agent' => ['disabled' => true],
+            'agent' => ['disabled' => false],
             'credentials' => 'include',
         ],
     ],
@@ -135,7 +156,7 @@ return [
 
     'middleware' => [
         'web',
-        RestrictedDocsAccess::class,
+        AuthorizeApiDocs::class,
     ],
 
     'extensions' => [],

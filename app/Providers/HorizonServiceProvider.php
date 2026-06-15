@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
+use Throwable;
 
 final class HorizonServiceProvider extends HorizonApplicationServiceProvider
 {
@@ -29,8 +30,24 @@ final class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', fn (?User $user = null): bool => in_array($user?->email, [
-            //
-        ]));
+        Gate::define('viewHorizon', function (?User $user = null): bool {
+            if (!$user instanceof User) {
+                return false;
+            }
+
+            if ($user->email === config('bizkit.admin_email')) {
+                return true;
+            }
+
+            if (config('permission.teams') && $user->current_team_id !== null && function_exists('setPermissionsTeamId')) {
+                setPermissionsTeamId($user->current_team_id);
+            }
+
+            try {
+                return $user->hasPermissionTo('view_horizon');
+            } catch (Throwable) {
+                return false;
+            }
+        });
     }
 }

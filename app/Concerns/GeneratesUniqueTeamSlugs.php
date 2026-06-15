@@ -18,7 +18,7 @@ trait GeneratesUniqueTeamSlugs
         $query = static::withTrashed()
             ->where(function ($query) use ($defaultSlug): void {
                 $query->where('slug', $defaultSlug)
-                    ->orWhere('slug', 'like', $defaultSlug.'-%');
+                    ->orWhere('slug', 'like', $defaultSlug . '-%');
             });
 
         if ($excludeId) {
@@ -34,7 +34,7 @@ trait GeneratesUniqueTeamSlugs
                     return 0;
                 }
 
-                if (preg_match('/^'.preg_quote($defaultSlug, '/').'-(\d+)$/', $slug, $matches)) {
+                if (preg_match('/^' . preg_quote($defaultSlug, '/') . '-(\d+)$/', $slug, $matches)) {
                     return (int) $matches[1];
                 }
 
@@ -45,6 +45,6 @@ trait GeneratesUniqueTeamSlugs
 
         return $existingSlugs->isEmpty()
             ? $defaultSlug
-            : $defaultSlug.'-'.($maxSuffix + 1);
+            : $defaultSlug . '-' . ($maxSuffix + 1);
     }
 }

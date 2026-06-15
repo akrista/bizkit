@@ -19,7 +19,9 @@ trait ProfileValidationRules
     protected function profileRules(?string $userId = null): array
     {
         return [
-            'name' => $this->nameRules(),
+            'username' => ['required', 'string', 'max:255', Rule::unique(User::class)->ignore($userId)],
+            'firstname' => ['required', 'string', 'max:255'],
+            'lastname' => ['required', 'string', 'max:255'],
             'email' => $this->emailRules($userId),
         ];
     }

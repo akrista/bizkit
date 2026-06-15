@@ -17,7 +17,7 @@ trait RedirectsToCurrentTeam
 
         URL::defaults(['current_team' => $team->slug]);
 
-        return sprintf('/%s%s', $team->slug, $redirect);
+        return sprintf('/team/%s%s', $team->slug, $redirect);
     }
 
     protected function currentTeam(Request $request): Team

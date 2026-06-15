@@ -11,10 +11,12 @@ use App\Http\Responses\PasskeyLoginResponse;
 use App\Http\Responses\RegisterResponse;
 use App\Http\Responses\TwoFactorLoginResponse;
 use App\Http\Responses\VerifyEmailResponse;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -47,6 +49,7 @@ final class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->configureAuthentication();
     }
 
     /**
@@ -63,13 +66,13 @@ final class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (): Factory|View => view('pages::auth.login'));
-        Fortify::verifyEmailView(fn (): Factory|View => view('pages::auth.verify-email'));
-        Fortify::twoFactorChallengeView(fn (): Factory|View => view('pages::auth.two-factor-challenge'));
-        Fortify::confirmPasswordView(fn (): Factory|View => view('pages::auth.confirm-password'));
-        Fortify::registerView(fn (): Factory|View => view('pages::auth.register'));
-        Fortify::resetPasswordView(fn (): Factory|View => view('pages::auth.reset-password'));
-        Fortify::requestPasswordResetLinkView(fn (): Factory|View => view('pages::auth.forgot-password'));
+        Fortify::loginView(fn (): Factory | View => view('pages::auth.login'));
+        Fortify::verifyEmailView(fn (): Factory | View => view('pages::auth.verify-email'));
+        Fortify::twoFactorChallengeView(fn (): Factory | View => view('pages::auth.two-factor-challenge'));
+        Fortify::confirmPasswordView(fn (): Factory | View => view('pages::auth.confirm-password'));
+        Fortify::registerView(fn (): Factory | View => view('pages::auth.register'));
+        Fortify::resetPasswordView(fn (): Factory | View => view('pages::auth.reset-password'));
+        Fortify::requestPasswordResetLinkView(fn (): Factory | View => view('pages::auth.forgot-password'));
     }
 
     /**
@@ -82,7 +85,7 @@ final class FortifyServiceProvider extends ServiceProvider
         RateLimiter::for('login', function (Request $request) {
             $username = $request->input(Fortify::username());
             $usernameString = is_string($username) ? $username : '';
-            $throttleKey = Str::transliterate(Str::lower($usernameString).'|'.$request->ip());
+            $throttleKey = Str::transliterate(Str::lower($usernameString) . '|' . $request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });
@@ -92,8 +95,34 @@ final class FortifyServiceProvider extends ServiceProvider
             $credentialIdString = is_string($credentialId) ? $credentialId : '';
 
             return Limit::perMinute(10)->by(
-                ($credentialIdString ?: $request->session()->getId()).'|'.$request->ip(),
+                ($credentialIdString ?: $request->session()->getId()) . '|' . $request->ip(),
             );
+        });
+    }
+
+    /**
+     * Configure authentication to support email or username.
+     */
+    private function configureAuthentication(): void
+    {
+        Fortify::authenticateUsing(function (Request $request): ?User {
+            $login = $request->input('email');
+            $password = $request->input('password');
+
+            if (! is_string($login) || ! is_string($password)) {
+                return null;
+            }
+
+            $user = User::query()
+                ->where('email', $login)
+                ->orWhere('username', $login)
+                ->first();
+
+            if ($user && Hash::check($password, $user->password)) {
+                return $user;
+            }
+
+            return null;
         });
     }
 }

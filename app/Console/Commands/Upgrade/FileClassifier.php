@@ -41,7 +41,7 @@ final readonly class FileClassifier
 
         foreach ($this->currentSkeletonFiles as $relativePath) {
             if (! array_key_exists($relativePath, $this->upstreamFiles)) {
-                $localPath = $this->localBasePath.DIRECTORY_SEPARATOR.$relativePath;
+                $localPath = $this->localBasePath . DIRECTORY_SEPARATOR . $relativePath;
                 if (file_exists($localPath)) {
                     $results[$relativePath] = FileStatus::DeletedUpstream;
                 }
@@ -56,7 +56,7 @@ final readonly class FileClassifier
      */
     public function classifyFile(string $relativePath, string $upstreamContent): FileStatus
     {
-        $localPath = $this->localBasePath.DIRECTORY_SEPARATOR.$relativePath;
+        $localPath = $this->localBasePath . DIRECTORY_SEPARATOR . $relativePath;
 
         if (! file_exists($localPath)) {
             return FileStatus::New;

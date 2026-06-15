@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Enums\FilamentMode;
+use App\Filament\Pages\Auth\EditProfile;
+use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Auth\Register;
+use App\Filament\Pages\Tenancy\RegisterTeam;
+use App\Http\Middleware\SyncSpatiePermissionsWithFilamentTenants;
+use App\Models\Team;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Http\Middleware\Authenticate;
@@ -15,6 +21,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Platform;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -32,8 +39,17 @@ final class FilamentPanelProvider extends PanelProvider
             ->default()
             ->id('filament')
             ->path(FilamentMode::fromConfig()->panelPath())
+            ->registration(
+                action: Register::class
+            )
+            ->registrationRouteSlug('register')
+            ->login(
+                action: Login::class
+            )
+            ->loginRouteSlug('login')
+
             ->profile(
-                // page: EditProfile::class,
+                page: EditProfile::class,
                 isSimple: false
             )
             ->multiFactorAuthentication([
@@ -45,14 +61,6 @@ final class FilamentPanelProvider extends PanelProvider
                 EmailAuthentication::make()
                     ->codeExpiryMinutes(4),
             ], isRequired: false)
-            ->login(
-            // action: Login::class
-            )
-            ->loginRouteSlug('login')
-            ->registration(
-            // action: Register::class
-            )
-            ->registrationRouteSlug('register')
             ->passwordReset()
             // ->passwordResetRoutePrefix('password-reset')
             // ->passwordResetRequestRouteSlug('request')
@@ -65,9 +73,28 @@ final class FilamentPanelProvider extends PanelProvider
             // ->emailChangeVerificationRoutePrefix('email-change-verification')
             // ->emailChangeVerificationRouteSlug('verify')
             ->revealablePasswords(true)
+            ->tenant(model: Team::class, slugAttribute: 'slug', ownershipRelationship: 'owner')
+            ->tenantRegistration(RegisterTeam::class)
+            ->tenantSwitcher()
+            ->tenantMenu()
+            ->searchableTenantMenu()
+            ->tenantMiddleware([
+                SyncSpatiePermissionsWithFilamentTenants::class,
+            ], isPersistent: true)
+            // ->font()
+            ->viteTheme('resources/css/filament/filament/theme.css')
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->globalSearchKeyBindings(['command+shift+f', 'ctrl+shift+f'])
+            ->globalSearchFieldSuffix(
+                fn(): string => match (Platform::detect()) {
+                    Platform::Windows,
+                    Platform::Linux => 'Ctrl+Shift+F',
+                    Platform::Mac => '⌘+⇧+F',
+                    default => 'Ctrl+Shift+F',
+                }
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

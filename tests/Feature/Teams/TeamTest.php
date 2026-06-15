@@ -138,7 +138,7 @@ test('team deletion requires name confirmation', function (): void {
 });
 
 test('deleting current team switches to alphabetically first remaining team', function (): void {
-    $user = User::factory()->create(['name' => 'Mike']);
+    $user = User::factory()->create(['firstname' => 'Mike', 'lastname' => '']);
 
     $zuluTeam = Team::factory()->create(['name' => 'Zulu Team']);
     $zuluTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
@@ -268,4 +268,31 @@ test('guests cannot access teams', function (): void {
     $response = $this->get(route('teams.index'));
 
     $response->assertRedirect(route('login'));
+});
+
+test('team userstamps are automatically populated', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $team = Team::query()->create([
+        'name' => 'Stamp Team',
+        'slug' => 'stamp-team',
+    ]);
+
+    expect($team->created_by)->toBe($user->id);
+    expect($team->updated_by)->toBe($user->id);
+
+    $anotherUser = User::factory()->create();
+    $this->actingAs($anotherUser);
+
+    $team->update(['name' => 'Updated Stamp Team']);
+
+    expect($team->fresh()->updated_by)->toBe($anotherUser->id);
+
+    $thirdUser = User::factory()->create();
+    $this->actingAs($thirdUser);
+
+    $team->delete();
+
+    expect($team->fresh()->deleted_by)->toBe($thirdUser->id);
 });

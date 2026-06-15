@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Override;
 
 /**
  * @property TeamRole $role
@@ -27,6 +28,7 @@ final class Membership extends Pivot
      *
      * @var bool
      */
+    #[Override]
     public $incrementing = true;
 
     /**

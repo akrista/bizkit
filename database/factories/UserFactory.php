@@ -28,15 +28,24 @@ final class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $firstname = fake()->firstName();
+        $lastname = fake()->lastName();
+
         return [
-            'name' => fake()->name(),
+            'username' => fake()->unique()->userName(),
+            'firstname' => $firstname,
+            'lastname' => $lastname,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => self::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'avatar_url' => null,
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            'filament_authentication_secret' => null,
+            'filament_authentication_recovery_codes' => null,
+            'has_email_authentication' => false,
         ];
     }
 
@@ -47,7 +56,7 @@ final class UserFactory extends Factory
     {
         return $this->afterCreating(function ($user): void {
             $team = Team::factory()->personal()->create([
-                'name' => $user->name."'s Team",
+                'name' => $user->name . "'s Team",
             ]);
 
             $team->members()->attach($user, [

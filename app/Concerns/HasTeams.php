@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
+use Throwable;
 
 trait HasTeams
 {
@@ -191,8 +192,30 @@ trait HasTeams
     /**
      * Determine if the user has the given permission on the team.
      */
-    public function hasTeamPermission(Team $team, TeamPermission $permission): bool
+    public function hasTeamPermission(Team $team, TeamPermission | string $permission): bool
     {
-        return $this->teamRole($team)?->hasPermission($permission) ?? false;
+        if (function_exists('setPermissionsTeamId')) {
+            setPermissionsTeamId($team->id);
+        }
+
+        $permissionName = $permission instanceof TeamPermission ? $permission->value : $permission;
+
+        try {
+            if ($this->hasPermissionTo($permissionName)) {
+                return true;
+            }
+        } catch (Throwable) {
+            // Permission might not exist in the database yet
+        }
+
+        $enumPermission = $permission instanceof TeamPermission
+            ? $permission
+            : TeamPermission::tryFrom($permission);
+
+        if ($enumPermission === null) {
+            return false;
+        }
+
+        return $this->teamRole($team)?->hasPermission($enumPermission) ?? false;
     }
 }

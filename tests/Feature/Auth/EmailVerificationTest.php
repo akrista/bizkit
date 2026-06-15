@@ -32,7 +32,7 @@ test('email can be verified', function (): void {
     Event::assertDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 
-    $response->assertRedirect(sprintf('/%s/dashboard?verified=1', $team->slug));
+    $response->assertRedirect(sprintf('/team/%s/dashboard?verified=1', $team->slug));
 });
 
 test('email is not verified with invalid hash', function (): void {
@@ -64,7 +64,7 @@ test('already verified user visiting verification link is redirected without fir
     );
 
     $this->actingAs($user)->get($verificationUrl)
-        ->assertRedirect(sprintf('/%s/dashboard?verified=1', $team->slug));
+        ->assertRedirect(sprintf('/team/%s/dashboard?verified=1', $team->slug));
 
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
     Event::assertNotDispatched(Verified::class);

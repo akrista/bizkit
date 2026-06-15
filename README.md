@@ -22,6 +22,7 @@ Bizkit is a personal Laravel starter kit built for visual excellence, modern rea
 - **Robust Authentication**: Powered by **Laravel Fortify** featuring secure registration, email verification, and password resets.
 - **Passkey/WebAuthn**: Out-of-the-box native passwordless authentication.
 - **Two-Factor Authentication (2FA)**: One-Time Password (OTP) verification with TOTP & recovery codes.
+- **Granular Permissions & Roles**: Tenancy-aware database-driven authorization powered by **Spatie Laravel Permission**, featuring automatic policy generation and dynamic permissions synchronization.
 
 ### 🛠️ Developer Experience & Architecture
 - **Interactive UI**: Powered by **Livewire v4** and beautiful **Flux UI** components.
@@ -30,6 +31,27 @@ Bizkit is a personal Laravel starter kit built for visual excellence, modern rea
 - **Production-Ready Docker**: Containerized with a multi-stage Alpine Linux image running FrankenPHP, Supervisor, and Supercronic scheduler.
 - **Feature Flags**: Native feature flagging and targeting built with **Laravel Pennant**.
 - **Quality Baseline**: Pre-configured linting, analysis, and testing using **Pint**, **Rector**, **Larastan**, and **Pest PHP**.
+
+---
+
+## Authorization & Roles
+
+Bizkit uses a hybrid, team-scoped authorization layer built on top of **Spatie Laravel Permission**.
+
+### Architecture
+- **Gate-Level Scoping**: Dynamically registers a `Gate::before` callback that scopes all authorization checks (e.g. `$user->can()`) to the active team (`current_team_id`).
+- **Super Admin Bypass**: Allows administrators matching `config('bizkit.admin_email')` or possessing the Spatie `admin` role to bypass policy checks.
+- **Dynamic Fallbacks**: Checks database-configured roles/permissions first and falls back to static `TeamRole` / `TeamPermission` enums if not found in the DB.
+
+### Artisan Commands
+- **Sync Permissions**: Seed all registered permissions (resources, pages, widgets, custom) and automatically map them to any `admin` role:
+  ```bash
+  php artisan bizkit:sync-permissions
+  ```
+- **Generate Policies**: Scaffold policies for your models using a predefined stub mapping Eloquent resource actions to Spatie permissions:
+  ```bash
+  php artisan bizkit:generate-policies [--force]
+  ```
 
 ---
 
@@ -63,7 +85,7 @@ When file differences are detected, the command runs an interactive diff selecti
 Ensure you have **PHP 8.5+**, **Composer**, **Git**, and **Bun** installed globally.
 
 > [!IMPORTANT]
-> **Windows Users**: Because **Laravel Horizon** requires `pcntl` and `posix` extensions (which are not natively supported on Windows), you should append `--ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix` to Composer commands (such as `composer require`, `composer update`, or `composer install`).
+> **Windows Users**: Because **Laravel Horizon** requires `pcntl` and `posix` extensions (which are not natively supported on Windows), you should append `--ignore-platform-reqs` to Composer commands (such as `composer require`, `composer update`, or `composer install`).
 
 ### Quick Start
 
@@ -90,7 +112,7 @@ Ensure you have **PHP 8.5+**, **Composer**, **Git**, and **Bun** installed globa
 The following features are planned for future releases of Bizkit:
 - 📖 **Application Documentation**: A comprehensive documentation site/viewer built into the kit.
 - 🔗 **Webhooks**: Outbound webhooks and subscription management for integrations.
-- 🔑 **Permissions & Roles**: Advanced granular access control out of the box.
+- 🔑 **Permissions & Roles** (Completed): Advanced granular access control out of the box.
 
 ---
 
@@ -126,7 +148,7 @@ A consolidated backlog of work for this project. Items are grouped by status and
 
 - [ ] **Application Documentation** — Build an in-app documentation site/viewer for the kit (routes, components, and a renderer that scans the codebase to produce reference pages).
 - [ ] **Webhooks** — Implement outbound webhook delivery and a subscription management UI so apps can broadcast events to third parties with retries, signing, and logs.
-- [ ] **Permissions & Roles** — Add an advanced, granular access-control layer on top of the existing `TeamPermission` / `TeamRole` enums, including a `Permission` table, gate definitions, and a policy generator.
+- [x] **Permissions & Roles** — Add an advanced, granular access-control layer on top of the existing `TeamPermission` / `TeamRole` enums, including a `Permission` table, gate definitions, and a policy generator.
 
 ### Partially Implemented (scaffolding present, finish needed)
 

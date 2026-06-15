@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Mattiverse\Userstamps\Traits\Userstamps;
 
 #[Fillable(['name', 'slug', 'is_personal'])]
 final class Team extends Model
@@ -23,6 +24,7 @@ final class Team extends Model
     use HasFactory;
 
     use SoftDeletes;
+    use Userstamps;
 
     /**
      * Get the team owner.
@@ -65,6 +67,16 @@ final class Team extends Model
     public function invitations(): HasMany
     {
         return $this->hasMany(TeamInvitation::class);
+    }
+
+    /**
+     * Get all roles for this team.
+     *
+     * @return HasMany<Role, $this>
+     */
+    public function roles(): HasMany
+    {
+        return $this->hasMany(Role::class);
     }
 
     /**

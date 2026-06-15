@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Rector\Caching\ValueObject\Storage\FileCacheStorage;
 use Rector\CodingStyle\Rector\ClassMethod\MakeInheritedMethodVisibilitySameAsParentRector;
+use Rector\CodingStyle\Rector\Use_\SeparateMultiUseImportsRector;
 use Rector\Config\RectorConfig;
 use Rector\DeadCode\Rector\Cast\RecastingRemovalRector;
 use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
@@ -19,13 +20,13 @@ return RectorConfig::configure()
         cacheClass: FileCacheStorage::class,
     )
     ->withPaths([
-        __DIR__.'/app',
-        __DIR__.'/bootstrap/app.php',
-        __DIR__.'/config',
-        __DIR__.'/database',
-        __DIR__.'/public',
-        __DIR__.'/routes',
-        __DIR__.'/tests',
+        __DIR__ . '/app',
+        __DIR__ . '/bootstrap/app.php',
+        __DIR__ . '/config',
+        __DIR__ . '/database',
+        __DIR__ . '/public',
+        __DIR__ . '/routes',
+        __DIR__ . '/tests',
     ])
     ->withPreparedSets(
         deadCode: true,
@@ -58,5 +59,8 @@ return RectorConfig::configure()
         AddOverrideAttributeToOverriddenMethodsRector::class,
         MakeInheritedMethodVisibilitySameAsParentRector::class,
         RecastingRemovalRector::class,
+        SeparateMultiUseImportsRector::class => [
+            __DIR__ . '/app/Models/User.php',
+        ],
     ])
     ->withPhpSets();

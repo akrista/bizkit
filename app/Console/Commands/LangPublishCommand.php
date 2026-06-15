@@ -9,19 +9,22 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
-use Symfony\Component\Console\Attribute\AsCommand;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\note;
+
+use Symfony\Component\Console\Attribute\AsCommand;
 
 #[AsCommand(name: 'bizkit:lang')]
 #[Description('Republish Laravel framework language files and optionally vendor (Filament) translations.')]
 #[Signature('bizkit:lang
                             {--existing : Pass --existing through to `lang:publish` (only overwrite already-published files)}
                             {--force : Pass --force through to `lang:publish` (overwrite any existing files)}
-                            {--no-vendor : Skip publishing vendor (Filament) translations}')]
+                            {--no-vendor : Skip publishing vendor (Filament) translations}
+                            {--lang=* : The language(s) to keep (e.g. "en", "es"). Defaults to app and fallback locales. Use "all" to keep everything.}')]
 final class LangPublishCommand extends Command
 {
     /**
@@ -139,6 +142,85 @@ final class LangPublishCommand extends Command
 
             if ($exit !== 0) {
                 $this->error(sprintf('`vendor:publish --tag=%s` exited with a non-zero status.', $tag));
+            }
+        }
+
+        $languagesToKeep = $this->getLanguagesToKeep();
+
+        if ($languagesToKeep !== null) {
+            $this->cleanUnwantedVendorTranslations($languagesToKeep);
+        }
+    }
+
+    /**
+     * Get the list of languages to keep.
+     *
+     * @return array<int, string>|null
+     */
+    private function getLanguagesToKeep(): ?array
+    {
+        $languages = $this->option('lang');
+
+        if (empty($languages)) {
+            return array_unique(array_filter([
+                config('app.locale'),
+                config('app.fallback_locale'),
+            ]));
+        }
+
+        $parsed = [];
+        foreach ($languages as $lang) {
+            if (mb_strtolower((string) $lang) === 'all') {
+                return null;
+            }
+
+            foreach (explode(',', (string) $lang) as $l) {
+                $trimmed = mb_trim($l);
+                if ($trimmed !== '') {
+                    $parsed[] = $trimmed;
+                }
+            }
+        }
+
+        return array_unique($parsed);
+    }
+
+    /**
+     * Clean up unwanted vendor translations from the lang/vendor directory.
+     *
+     * @param  array<int, string>  $languagesToKeep
+     */
+    private function cleanUnwantedVendorTranslations(array $languagesToKeep): void
+    {
+        info(sprintf('Cleaning up unwanted vendor translations… keeping: %s', implode(', ', $languagesToKeep)));
+
+        $vendorPath = app()->langPath() . DIRECTORY_SEPARATOR . 'vendor';
+
+        if (! File::isDirectory($vendorPath)) {
+            return;
+        }
+
+        $directories = File::directories($vendorPath);
+
+        foreach ($directories as $packageDir) {
+            // Delete unwanted locale subdirectories (e.g. lang/vendor/package/es)
+            $locales = File::directories($packageDir);
+            foreach ($locales as $localeDir) {
+                $locale = basename((string) $localeDir);
+                if (! in_array($locale, $languagesToKeep, true)) {
+                    File::deleteDirectory($localeDir);
+                }
+            }
+
+            // Delete unwanted JSON translation files (e.g. lang/vendor/package/es.json)
+            $files = File::files($packageDir);
+            foreach ($files as $file) {
+                if ($file->getExtension() === 'json') {
+                    $locale = $file->getBasename('.json');
+                    if (! in_array($locale, $languagesToKeep, true)) {
+                        File::delete($file->getRealPath());
+                    }
+                }
             }
         }
     }

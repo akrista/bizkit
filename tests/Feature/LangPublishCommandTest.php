@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Console\Commands\LangPublishCommand;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
 
 beforeEach(function (): void {
@@ -25,6 +26,10 @@ beforeEach(function (): void {
 
         return $command;
     });
+});
+
+afterEach(function (): void {
+    File::deleteDirectory(app()->langPath() . '/vendor/test-package');
 });
 
 function callsMatchingCommand(array $calls, string $command): array
@@ -125,4 +130,82 @@ test('it skips vendor publishing when the user declines the confirmation', funct
     );
 
     expect($publishCalls)->toBeEmpty();
+});
+
+test('it cleans up unwanted vendor translations using default app and fallback locales', function (): void {
+    // 1. Create dummy files/folders
+    $testPackagePath = app()->langPath() . '/vendor/test-package';
+    File::makeDirectory($testPackagePath . '/en', 0755, true, true);
+    File::makeDirectory($testPackagePath . '/fr', 0755, true, true);
+    File::put($testPackagePath . '/es.json', '{}');
+
+    // Make sure they exist
+    expect(File::isDirectory($testPackagePath . '/en'))->toBeTrue()
+        ->and(File::isDirectory($testPackagePath . '/fr'))->toBeTrue()
+        ->and(File::exists($testPackagePath . '/es.json'))->toBeTrue();
+
+    // 2. Set up expected publish groups and run command
+    ServiceProvider::$publishGroups = [
+        'test-package-translations' => [],
+    ];
+
+    $this->artisan('bizkit:lang')
+        ->expectsConfirmation(
+            'Publish 1 vendor translation tag(s)? (test-package-translations)',
+            'yes',
+        )
+        ->assertSuccessful();
+
+    // 3. Verify cleanup
+    // Default app.locale and app.fallback_locale should be kept (usually 'en')
+    expect(File::isDirectory($testPackagePath . '/en'))->toBeTrue()
+        ->and(File::isDirectory($testPackagePath . '/fr'))->toBeFalse()
+        ->and(File::exists($testPackagePath . '/es.json'))->toBeFalse();
+});
+
+test('it cleans up unwanted vendor translations using custom --lang options', function (): void {
+    $testPackagePath = app()->langPath() . '/vendor/test-package';
+    File::makeDirectory($testPackagePath . '/en', 0755, true, true);
+    File::makeDirectory($testPackagePath . '/fr', 0755, true, true);
+    File::put($testPackagePath . '/es.json', '{}');
+
+    ServiceProvider::$publishGroups = [
+        'test-package-translations' => [],
+    ];
+
+    // Specify --lang=fr,es
+    $this->artisan('bizkit:lang', ['--lang' => ['fr,es']])
+        ->expectsConfirmation(
+            'Publish 1 vendor translation tag(s)? (test-package-translations)',
+            'yes',
+        )
+        ->assertSuccessful();
+
+    // 'fr' and 'es' should be kept, 'en' should be deleted
+    expect(File::isDirectory($testPackagePath . '/en'))->toBeFalse()
+        ->and(File::isDirectory($testPackagePath . '/fr'))->toBeTrue()
+        ->and(File::exists($testPackagePath . '/es.json'))->toBeTrue();
+});
+
+test('it does not clean up anything when --lang=all is passed', function (): void {
+    $testPackagePath = app()->langPath() . '/vendor/test-package';
+    File::makeDirectory($testPackagePath . '/en', 0755, true, true);
+    File::makeDirectory($testPackagePath . '/fr', 0755, true, true);
+    File::put($testPackagePath . '/es.json', '{}');
+
+    ServiceProvider::$publishGroups = [
+        'test-package-translations' => [],
+    ];
+
+    $this->artisan('bizkit:lang', ['--lang' => ['all']])
+        ->expectsConfirmation(
+            'Publish 1 vendor translation tag(s)? (test-package-translations)',
+            'yes',
+        )
+        ->assertSuccessful();
+
+    // Everything should be kept
+    expect(File::isDirectory($testPackagePath . '/en'))->toBeTrue()
+        ->and(File::isDirectory($testPackagePath . '/fr'))->toBeTrue()
+        ->and(File::exists($testPackagePath . '/es.json'))->toBeTrue();
 });

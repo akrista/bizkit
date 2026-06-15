@@ -36,12 +36,14 @@ final class CreateNewUser implements CreatesNewUsers
 
         return DB::transaction(function () use ($input) {
             $user = User::query()->create([
-                'name' => $input['name'],
+                'username' => $input['username'],
+                'firstname' => $input['firstname'],
+                'lastname' => $input['lastname'],
                 'email' => $input['email'],
                 'password' => $input['password'],
             ]);
 
-            $this->createTeam->handle($user, $user->name."'s Team", isPersonal: true);
+            $this->createTeam->handle($user, __('bizkit/teams.personal_team', ['name' => $user->name]), isPersonal: true);
 
             return $user;
         });

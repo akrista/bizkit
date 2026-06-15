@@ -1,6 +1,6 @@
 name: bizkit
 php: '8.5'
-secured: false
+secured: true
 aliases: {  }
 integrations:
     forge: {  }

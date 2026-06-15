@@ -11,13 +11,16 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
-use Symfony\Component\Console\Attribute\AsCommand;
-use ZipArchive;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\spin;
+
+use Symfony\Component\Console\Attribute\AsCommand;
+
 use function Termwind\render;
+
+use ZipArchive;
 
 #[AsCommand(name: 'bizkit:upgrade')]
 #[Description('Upgrade your project by pulling in changes from the upstream bizkit skeleton.')]
@@ -69,13 +72,13 @@ final class UpgradeCommand extends Command
         if ($currentVersion !== null) {
             $currentSkeletonFiles = spin(
                 fn (): array => array_keys($this->fetchUpstreamFiles($currentVersion)),
-                'Fetching current skeleton files for version '.$currentVersion.'…',
+                'Fetching current skeleton files for version ' . $currentVersion . '…',
             );
         }
 
         $upstreamFiles = spin(
             fn (): array => $this->fetchUpstreamFiles($targetRef),
-            'Fetching upstream files from '.self::UPSTREAM_REPO.'@'.$targetRef.'…',
+            'Fetching upstream files from ' . self::UPSTREAM_REPO . '@' . $targetRef . '…',
         );
 
         if ($upstreamFiles === []) {
@@ -217,7 +220,7 @@ final class UpgradeCommand extends Command
                 $response = Http::withHeaders(array_merge([
                     'User-Agent' => 'bizkit-upgrader/1.0',
                     'Accept' => 'application/vnd.github+json',
-                ], $this->getAuthHeader()))->get('https://api.github.com/repos/'.self::UPSTREAM_REPO.'/tags');
+                ], $this->getAuthHeader()))->get('https://api.github.com/repos/' . self::UPSTREAM_REPO . '/tags');
 
                 if (! $response->successful()) {
                     return [];
@@ -285,7 +288,7 @@ final class UpgradeCommand extends Command
      */
     private function fetchUpstreamFiles(string $ref): array
     {
-        $url = 'https://api.github.com/repos/'.self::UPSTREAM_REPO.'/zipball/'.$ref;
+        $url = 'https://api.github.com/repos/' . self::UPSTREAM_REPO . '/zipball/' . $ref;
 
         $response = Http::withHeaders(array_merge([
             'User-Agent' => 'bizkit-upgrader/1.0',
@@ -585,7 +588,7 @@ final class UpgradeCommand extends Command
             'repository' => self::UPSTREAM_REPO,
         ];
 
-        file_put_contents($versionFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+        file_put_contents($versionFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
         render(sprintf(<<<'HTML'
             <div class="mx-2 mt-1 text-green-500 font-semibold">
                 ✓ Updated <span class="text-white">%s</span> to <span class="text-white">%s</span>
@@ -610,7 +613,7 @@ final class UpgradeCommand extends Command
         }
 
         if ($token) {
-            return ['Authorization' => 'Bearer '.$token];
+            return ['Authorization' => 'Bearer ' . $token];
         }
 
         return [];

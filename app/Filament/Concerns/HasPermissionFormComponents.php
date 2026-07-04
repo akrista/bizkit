@@ -105,14 +105,14 @@ trait HasPermissionFormComponents
                 ]);
         }
 
-        $tabs[] = Tab::make(__('bizkit/fields.resources'))
+        $tabs[] = Tab::make(__('fields.resources'))
             ->icon(Heroicon::OutlinedCpuChip)
             ->schema($resourceSections);
 
         // Tab 2: Pages
         $pagesPermissions = $registry->getPages();
         if (count($pagesPermissions) > 0) {
-            $tabs[] = Tab::make(__('bizkit/fields.pages'))
+            $tabs[] = Tab::make(__('fields.pages'))
                 ->icon(Heroicon::OutlinedDocumentText)
                 ->schema([
                     CheckboxList::make('pages_tab')
@@ -141,7 +141,7 @@ trait HasPermissionFormComponents
         // Tab 3: Widgets
         $widgetsPermissions = $registry->getWidgets();
         if (count($widgetsPermissions) > 0) {
-            $tabs[] = Tab::make(__('bizkit/fields.widgets'))
+            $tabs[] = Tab::make(__('fields.widgets'))
                 ->icon(Heroicon::OutlinedChartBar)
                 ->schema([
                     CheckboxList::make('widgets_tab')

@@ -1,7 +1,7 @@
 @extends('errors::illustrated-layout')
 
 @section('code', '500')
-@section('title', __('bizkit/errors.500.title'))
+@section('title', __('errors.500.title'))
 
 @section('image')
     <div style="background-image: url({{ asset('/svg/500.svg') }});"
@@ -9,4 +9,4 @@
     </div>
 @endsection
 
-@section('message', __('bizkit/errors.500.message'))
+@section('message', __('errors.500.message'))

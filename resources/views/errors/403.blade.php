@@ -9,4 +9,4 @@
     </div>
 @endsection
 
-@section('message', __($exception->getMessage() ?: __('bizkit/errors.403.message')))
+@section('message', __($exception->getMessage() ?: __('errors.403.message')))

@@ -43,7 +43,7 @@ final class CreateNewUser implements CreatesNewUsers
                 'password' => $input['password'],
             ]);
 
-            $this->createTeam->handle($user, __('bizkit/teams.personal_team', ['name' => $user->name]), isPersonal: true);
+            $this->createTeam->handle($user, __('app.personal_team', ['name' => $user->name]), isPersonal: true);
 
             return $user;
         });

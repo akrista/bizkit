@@ -22,7 +22,7 @@
                 <!-- First Name -->
                 <flux:input
                     name="firstname"
-                    :label="__('bizkit/fields.first_name')"
+                    :label="__('fields.first_name')"
                     :value="old('firstname', config('app.env') !== 'production' ? 'Developer' : '')"
                     type="text"
                     required
@@ -32,7 +32,7 @@
                 <!-- Last Name -->
                 <flux:input
                     name="lastname"
-                    :label="__('bizkit/fields.last_name')"
+                    :label="__('fields.last_name')"
                     :value="old('lastname', config('app.env') !== 'production' ? 'User' : '')"
                     type="text"
                     required
@@ -43,7 +43,7 @@
             <!-- Email Address -->
             <flux:input
                 name="email"
-                :label="__('bizkit/fields.email_address')"
+                :label="__('fields.email_address')"
                 :value="old('email', config('app.env') !== 'production' ? 'dev@example.com' : '')"
                 type="email"
                 required

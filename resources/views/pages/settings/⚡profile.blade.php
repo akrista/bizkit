@@ -90,12 +90,12 @@ new #[Title('Profile settings')] class extends Component {
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <flux:input wire:model="username" :label="__('Username')" type="text" required autofocus autocomplete="username" />
             <div class="grid grid-cols-2 gap-4">
-                <flux:input wire:model="firstname" :label="__('bizkit/fields.first_name')" type="text" required autocomplete="given-name" />
-                <flux:input wire:model="lastname" :label="__('bizkit/fields.last_name')" type="text" required autocomplete="family-name" />
+                <flux:input wire:model="firstname" :label="__('fields.first_name')" type="text" required autocomplete="given-name" />
+                <flux:input wire:model="lastname" :label="__('fields.last_name')" type="text" required autocomplete="family-name" />
             </div>
 
             <div>
-                <flux:input wire:model="email" :label="__('bizkit/fields.email_address')" type="email" required autocomplete="email" />
+                <flux:input wire:model="email" :label="__('fields.email_address')" type="email" required autocomplete="email" />
 
                 @if ($this->hasUnverifiedEmail)
                     <div>

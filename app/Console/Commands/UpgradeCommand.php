@@ -26,7 +26,9 @@ use ZipArchive;
 #[Description('Upgrade your project by pulling in changes from the upstream bizkit skeleton.')]
 #[Signature('bizkit:upgrade
                             {--dev : Compare against HEAD instead of a stable tag}
-                            {--dry-run : Show what would change without applying anything}')]
+                            {--dry-run : Show what would change without applying anything}
+                            {--take-all : Automatically overwrite all differing files and apply all deletions}
+                            {--skip-all : Keep all local versions of differing files and skip deletions}')]
 final class UpgradeCommand extends Command
 {
     /**
@@ -56,6 +58,12 @@ final class UpgradeCommand extends Command
                 </div>
             </div>
         HTML);
+
+        if ($this->option('take-all') && $this->option('skip-all')) {
+            $this->error('Error: You cannot use both --take-all and --skip-all.');
+
+            return self::FAILURE;
+        }
 
         if (! $this->passesPreflight()) {
             return self::FAILURE;
@@ -124,7 +132,7 @@ final class UpgradeCommand extends Command
                 🎉 Upgrade complete!
             </div>
             <div class="mx-2 text-gray-400">
-                Please review applied changes with <span class="text-cyan-400 font-semibold">git diff HEAD</span>
+                Please review applied changes with <span class="text-cyan-400 font-bold">git diff HEAD</span>
             </div>
         HTML);
 
@@ -411,7 +419,7 @@ final class UpgradeCommand extends Command
         if ($newCount > 0) {
             render(<<<'HTML'
                 <div class="mx-2 mt-2">
-                    <div class="text-green-500 font-bold text-sm">New Files (will be applied automatically):</div>
+                    <div class="text-green-500 font-bold">New Files (will be applied automatically):</div>
                 </div>
             HTML);
             foreach ($grouped[FileStatus::New->value] as $path) {
@@ -426,7 +434,7 @@ final class UpgradeCommand extends Command
         if ($differsCount > 0) {
             render(<<<'HTML'
                 <div class="mx-2 mt-2">
-                    <div class="text-yellow-500 font-bold text-sm">Files that differ (you will decide for each):</div>
+                    <div class="text-yellow-500 font-bold">Files that differ (you will decide for each):</div>
                 </div>
             HTML);
             foreach ($grouped[FileStatus::Differs->value] as $path) {
@@ -441,7 +449,7 @@ final class UpgradeCommand extends Command
         if ($deletedCount > 0) {
             render(<<<'HTML'
                 <div class="mx-2 mt-2">
-                    <div class="text-red-500 font-bold text-sm">Deleted upstream (you will decide for each):</div>
+                    <div class="text-red-500 font-bold">Deleted upstream (you will decide for each):</div>
                 </div>
             HTML);
             foreach ($grouped[FileStatus::DeletedUpstream->value] as $path) {
@@ -486,7 +494,7 @@ final class UpgradeCommand extends Command
 
         file_put_contents($localPath, $content);
         render(sprintf(<<<'HTML'
-            <div class="mx-2 text-green-500 font-semibold">
+            <div class="mx-2 text-green-500 font-bold">
                 ✓ Applied: <span class="text-white">%s</span>
             </div>
         HTML, $relativePath));
@@ -497,6 +505,27 @@ final class UpgradeCommand extends Command
      */
     private function walkUserThroughDiff(string $relativePath, string $upstreamContent): void
     {
+        if ($this->option('take-all')) {
+            file_put_contents(base_path($relativePath), $upstreamContent);
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-green-500 font-bold">
+                    ✓ Overwritten with upstream version (automatic): <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
+
+            return;
+        }
+
+        if ($this->option('skip-all')) {
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-gray-400">
+                    – Kept local version (automatic): <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
+
+            return;
+        }
+
         render(sprintf(<<<'HTML'
             <div class="mx-2 mt-2 px-1 bg-yellow-600 text-black font-bold">
                 ~ Differs: %s
@@ -531,7 +560,7 @@ final class UpgradeCommand extends Command
         if ($choice === 'take') {
             file_put_contents(base_path($relativePath), $upstreamContent);
             render(sprintf(<<<'HTML'
-                <div class="mx-2 text-green-500 font-semibold">
+                <div class="mx-2 text-green-500 font-bold">
                     ✓ Overwritten with upstream version: <span class="text-white">%s</span>
                 </div>
             HTML, $relativePath));
@@ -549,6 +578,27 @@ final class UpgradeCommand extends Command
      */
     private function walkUserThroughDeletion(string $relativePath): void
     {
+        if ($this->option('take-all')) {
+            @unlink(base_path($relativePath));
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-red-500 font-bold">
+                    ✓ Deleted (automatic): <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
+
+            return;
+        }
+
+        if ($this->option('skip-all')) {
+            render(sprintf(<<<'HTML'
+                <div class="mx-2 text-gray-400">
+                    – Kept local file (automatic): <span class="text-white">%s</span>
+                </div>
+            HTML, $relativePath));
+
+            return;
+        }
+
         render(sprintf(<<<'HTML'
             <div class="mx-2 mt-2 px-1 bg-red-600 text-white font-bold">
                 - Deleted Upstream: %s
@@ -563,7 +613,7 @@ final class UpgradeCommand extends Command
         if ($shouldDelete) {
             @unlink(base_path($relativePath));
             render(sprintf(<<<'HTML'
-                <div class="mx-2 text-red-500 font-semibold">
+                <div class="mx-2 text-red-500 font-bold">
                     ✓ Deleted: <span class="text-white">%s</span>
                 </div>
             HTML, $relativePath));
@@ -590,7 +640,7 @@ final class UpgradeCommand extends Command
 
         file_put_contents($versionFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
         render(sprintf(<<<'HTML'
-            <div class="mx-2 mt-1 text-green-500 font-semibold">
+            <div class="mx-2 mt-1 text-green-500 font-bold">
                 ✓ Updated <span class="text-white">%s</span> to <span class="text-white">%s</span>
             </div>
         HTML, self::VERSION_FILE, $newVersion));

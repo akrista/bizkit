@@ -105,6 +105,33 @@ Ensure you have **PHP 8.5+**, **Composer**, **Git**, and **Bun** installed globa
    composer run dev
    ```
 
+### Git Hooks (Husky)
+
+Bizkit uses **Husky** to automate code style checks before commits are finalized. The pre-commit hook automatically runs **Laravel Pint** (`composer lint:check`) on staged files.
+
+These hooks are configured automatically during `composer run setup` (which calls `bun install`), but you can also manually set them up or re-enable them by running:
+
+```bash
+bun run prepare
+```
+
+#### Troubleshooting: Git Hooks / Husky on Windows (Laravel Herd)
+
+If you encounter `composer: command not found` or `php: command not found` errors during `git commit` (caused by Husky executing in a bash environment that cannot natively run Windows `.bat` files), create extensionless shell wrappers in your Herd bin directory (`C:\Users\<YourUser>\.config\herd\bin`):
+
+* **Composer Wrapper** (`composer`):
+  ```bash
+  #!/bin/sh
+  php "$(dirname "$0")/composer.phar" "$@"
+  ```
+
+* **PHP Wrapper** (`php`):
+  ```bash
+  #!/bin/sh
+  PHP_EXE=$(grep -o '"[^"]*"' "$(dirname "$0")/php.bat" | head -n 1 | tr -d '"')
+  exec "$PHP_EXE" "$@"
+  ```
+
 ---
 
 ## Future Roadmap

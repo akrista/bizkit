@@ -53,7 +53,7 @@ final class Register extends \Filament\Auth\Pages\Register
             ]);
 
             $createTeam = resolve(CreateTeam::class);
-            $createTeam->handle($user, __('bizkit/teams.personal_team', ['name' => sprintf('%s %s', $data['firstname'], $data['lastname'])]), isPersonal: true);
+            $createTeam->handle($user, __('app.personal_team', ['name' => sprintf('%s %s', $data['firstname'], $data['lastname'])]), isPersonal: true);
 
             return $user;
         });
@@ -89,7 +89,7 @@ final class Register extends \Filament\Auth\Pages\Register
     private function getFirstnameFormComponent(): TextInput
     {
         return TextInput::make('firstname')
-            ->label(__('bizkit/fields.first_name'))
+            ->label(__('fields.first_name'))
             ->required()
             ->maxLength(255);
     }
@@ -97,7 +97,7 @@ final class Register extends \Filament\Auth\Pages\Register
     private function getLastnameFormComponent(): TextInput
     {
         return TextInput::make('lastname')
-            ->label(__('bizkit/fields.last_name'))
+            ->label(__('fields.last_name'))
             ->required()
             ->maxLength(255);
     }

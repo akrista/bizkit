@@ -11,6 +11,7 @@ use Filament\Actions\ExportAction;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -39,6 +40,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDevCommands();
         $this->configureFilament();
         $this->configureGates();
 
@@ -81,6 +83,30 @@ final class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict();
 
         Model::unguard();
+    }
+
+    private function configureDevCommands(): void
+    {
+        $config = config('dev');
+
+        if ($only = $config['only'] ?? []) {
+            DevCommands::only(...$only);
+
+            return;
+        }
+
+        if ($except = $config['except'] ?? []) {
+            DevCommands::except(...$except);
+        }
+
+        foreach ($config['processes'] ?? [] as $name => $spec) {
+            match ($spec['type']) {
+                'artisan' => DevCommands::artisan($spec['command'], $name),
+                'node' => DevCommands::node($spec['command'], $name),
+                'node-exec' => DevCommands::nodeExec($spec['command'], $name),
+                default => DevCommands::register($spec['command'], $name),
+            };
+        }
     }
 
     private function configureFilament(): void

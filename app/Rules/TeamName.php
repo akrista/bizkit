@@ -42,7 +42,7 @@ final class TeamName implements ValidationRule
      *
      * @return array<int, string>
      */
-    private function reservedNames(): array
+    protected function reservedNames(): array
     {
         if ($this->names === null) {
             $this->names = array_merge($this->routesPrefixes(), [
@@ -387,7 +387,7 @@ final class TeamName implements ValidationRule
      *
      * @return array<int, string>
      */
-    private function routesPrefixes(): array
+    protected function routesPrefixes(): array
     {
         return collect(Route::getRoutes()->getRoutes())
             ->map(fn (RouteElement $route) => $route->uri)

@@ -190,7 +190,7 @@ A consolidated backlog of work for this project. Items are grouped by status and
 
 - [ ] **Passkey UX tests** — Only the `SecurityTest` covers 2FA. Add feature tests for passkey registration, passkey login, and passkey removal flows.
 - [ ] **Team invitations** — `TeamInvitationTest` exists, but there is no test for invitation expiry, reuse-after-acceptance, or email throttling. Cover these edge cases.
-- [ ] **Team-switcher component** — `resources/views/components/⚡team-switcher.blade.php` is present; verify it works end-to-end with the team-scoped routes and `SetTeamUrlDefaults` middleware, then add a regression test.
+- [ ] **Team-switcher component** — `resources/views/components/team-switcher.blade.php` is present; verify it works end-to-end with the team-scoped routes and `SetTeamUrlDefaults` middleware, then add a regression test.
 - [ ] **Session/device management** — Add a "Sessions" section under `settings/security` listing and revoking active sessions/devices.
 
 ### Quality, Tooling & CI

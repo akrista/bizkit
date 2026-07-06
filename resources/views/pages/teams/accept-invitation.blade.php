@@ -38,7 +38,9 @@ new #[Title('Teams')] class extends Component {
             $user->switchTeam($team);
         });
 
-        $this->redirectRoute('dashboard');
+        $this->redirectRoute('dashboard', navigate: true);
+
+        session()->flash('team-invitation-accepted', true);
     }
 
     private function validateInvitation(User $user, TeamInvitation $invitation): void

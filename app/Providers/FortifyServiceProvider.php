@@ -11,9 +11,9 @@ use App\Http\Responses\PasskeyLoginResponse;
 use App\Http\Responses\RegisterResponse;
 use App\Http\Responses\TwoFactorLoginResponse;
 use App\Http\Responses\VerifyEmailResponse;
+use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -66,13 +66,17 @@ final class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (): Factory | View => view('pages::auth.login'));
-        Fortify::verifyEmailView(fn (): Factory | View => view('pages::auth.verify-email'));
-        Fortify::twoFactorChallengeView(fn (): Factory | View => view('pages::auth.two-factor-challenge'));
-        Fortify::confirmPasswordView(fn (): Factory | View => view('pages::auth.confirm-password'));
-        Fortify::registerView(fn (): Factory | View => view('pages::auth.register'));
-        Fortify::resetPasswordView(fn (): Factory | View => view('pages::auth.reset-password'));
-        Fortify::requestPasswordResetLinkView(fn (): Factory | View => view('pages::auth.forgot-password'));
+        Fortify::loginView(fn (Request $request): View => view('pages::auth.login', [
+            'teamInvitation' => $this->teamInvitation($request),
+        ]));
+        Fortify::verifyEmailView(fn (): View => view('pages::auth.verify-email'));
+        Fortify::twoFactorChallengeView(fn (): View => view('pages::auth.two-factor-challenge'));
+        Fortify::confirmPasswordView(fn (): View => view('pages::auth.confirm-password'));
+        Fortify::registerView(fn (Request $request): View => view('pages::auth.register', [
+            'teamInvitation' => $this->teamInvitation($request),
+        ]));
+        Fortify::resetPasswordView(fn (): View => view('pages::auth.reset-password'));
+        Fortify::requestPasswordResetLinkView(fn (): View => view('pages::auth.forgot-password'));
     }
 
     /**
@@ -124,5 +128,37 @@ final class FortifyServiceProvider extends ServiceProvider
 
             return null;
         });
+    }
+
+    /**
+     * Get the pending team invitation context for auth pages.
+     *
+     * @return array{code: string, teamName: string}|null
+     */
+    private function teamInvitation(Request $request): ?array
+    {
+        $invitationCode = $request->query('invitation');
+
+        if (! is_string($invitationCode)) {
+            return null;
+        }
+
+        $invitation = TeamInvitation::query()
+            ->with('team')
+            ->where('code', $invitationCode)
+            ->whereNull('accepted_at')
+            ->where(fn ($query) => $query
+                ->whereNull('expires_at')
+                ->orWhere('expires_at', '>=', now()))
+            ->first();
+
+        if (! $invitation) {
+            return null;
+        }
+
+        return [
+            'code' => $invitation->code,
+            'teamName' => $invitation->team->name,
+        ];
     }
 }

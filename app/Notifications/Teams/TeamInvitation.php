@@ -9,7 +9,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use UnexpectedValueException;
 
 final class TeamInvitation extends Notification implements ShouldQueue
 {
@@ -38,15 +37,17 @@ final class TeamInvitation extends Notification implements ShouldQueue
         $team = $this->invitation->team;
         $inviter = $this->invitation->inviter;
 
-        throw_if(! $team || ! $inviter, UnexpectedValueException::class, 'Team and inviter are required for a team invitation notification.');
-
         return (new MailMessage)
-            ->subject(__("You've been invited to join :teamName", ['teamName' => (string) $team->name]))
+            ->subject(__("You've been invited to join :teamName", ['teamName' => $team->name]))
             ->line(__(':inviterName has invited you to join the :teamName team.', [
-                'inviterName' => (string) $inviter->name,
-                'teamName' => (string) $team->name,
+                'inviterName' => $inviter->name,
+                'teamName' => $team->name,
             ]))
-            ->action(__('Accept invitation'), url(sprintf('/invitations/%s/accept', $this->invitation->code)));
+            ->line(__('Log in and visit your dashboard to accept or decline this invitation.'))
+            ->action(
+                __('Log in'),
+                route('login', ['invitation' => $this->invitation->code]),
+            );
     }
 
     /**
@@ -59,7 +60,7 @@ final class TeamInvitation extends Notification implements ShouldQueue
         return [
             'invitation_id' => $this->invitation->id,
             'team_id' => $this->invitation->team_id,
-            'team_name' => $this->invitation->team ? (string) $this->invitation->team->name : '',
+            'team_name' => $this->invitation->team->name,
             'role' => $this->invitation->role->value,
         ];
     }

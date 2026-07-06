@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\CarbonImmutable;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 return [
@@ -135,10 +133,6 @@ return [
     |
     */
 
-    'serializable_classes' => [
-        Collection::class,
-        stdClass::class,
-        CarbonImmutable::class,
-    ],
+    'serializable_classes' => false,
 
 ];

@@ -25,7 +25,7 @@ final readonly class UniqueTeamInvitation implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value)) {
-            $fail(__('The email address must be a string.'));
+            $fail(__('app.validation_email_string'));
 
             return;
         }
@@ -37,7 +37,7 @@ final readonly class UniqueTeamInvitation implements ValidationRule
             ->exists();
 
         if ($isMember) {
-            $fail(__('This user is already a member of the team.'));
+            $fail(__('app.validation_member_exists'));
 
             return;
         }
@@ -52,7 +52,7 @@ final readonly class UniqueTeamInvitation implements ValidationRule
             ->exists();
 
         if ($hasPendingInvitation) {
-            $fail(__('An invitation has already been sent to this email address.'));
+            $fail(__('app.validation_invitation_pending'));
         }
     }
 }

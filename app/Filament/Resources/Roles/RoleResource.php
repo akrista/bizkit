@@ -50,8 +50,6 @@ final class RoleResource extends Resource
     #[Override]
     protected static ?string $tenantOwnershipRelationshipName = 'team';
 
-    private ?string $subheading = 'Aquí puedes gestionar los perfiles de usuario de tu organización';
-
     public static function getModelLabel(): string
     {
         return __('resources.role');
@@ -76,14 +74,14 @@ final class RoleResource extends Resource
                         Section::make()
                             ->schema([
                                 TextInput::make('name')
-                                    ->label(__('Role Name'))
+                                    ->label(__('fields.role_name'))
                                     ->required()
                                     ->trim()
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true)
-                                    ->placeholder('e.g. admin, editor, user'),
+                                    ->placeholder(__('fields.placeholder_role_name')),
                                 TextInput::make('guard_name')
-                                    ->label(__('Guard'))
+                                    ->label(__('fields.guard_name'))
                                     ->default('web')
                                     ->nullable()
                                     ->trim()
@@ -106,14 +104,14 @@ final class RoleResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('Id')
+                    ->label(__('fields.id'))
                     ->alignCenter()
                     ->verticallyAlignCenter()
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('name')
-                    ->label(__('Role'))
+                    ->label(__('fields.role'))
                     ->weight(FontWeight::Medium)
                     ->formatStateUsing(fn (string $state): string => Str::headline($state))
                     ->alignCenter()
@@ -121,20 +119,20 @@ final class RoleResource extends Resource
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('guard_name')
-                    ->label(__('Guard'))
+                    ->label(__('fields.guard_name'))
                     ->badge()
                     ->alignCenter()
                     ->verticallyAlignCenter()
                     ->color('warning'),
                 TextColumn::make('permissions_count')
-                    ->label(__('Permissions'))
+                    ->label(__('fields.permissions'))
                     ->badge()
                     ->alignCenter()
                     ->verticallyAlignCenter()
                     ->counts('permissions')
                     ->color('primary'),
                 TextColumn::make('updated_at')
-                    ->label(__('Updated At'))
+                    ->label(__('fields.updated_at'))
                     ->dateTime('d/m/Y h:i A')
                     ->alignCenter()
                     ->verticallyAlignCenter()

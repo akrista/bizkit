@@ -68,19 +68,19 @@ final class Register extends \Filament\Auth\Pages\Register
             ->maxLength(255)
             ->unique($this->getUserModel())
             ->validationMessages([
-                'unique' => __('This email is already registered.'),
+                'unique' => __('app.validation_email_taken'),
             ]);
     }
 
     private function getUsernameFormComponent(): TextInput
     {
         return TextInput::make('username')
-            ->label(__('Username'))
+            ->label(__('fields.username'))
             ->required()
             ->maxLength(255)
             ->unique($this->getUserModel())
             ->validationMessages([
-                'unique' => __('This username is already taken.'),
+                'unique' => __('app.validation_username_taken'),
             ])
             ->autofocus()
             ->autocomplete(false);
@@ -89,7 +89,7 @@ final class Register extends \Filament\Auth\Pages\Register
     private function getFirstnameFormComponent(): TextInput
     {
         return TextInput::make('firstname')
-            ->label(__('fields.first_name'))
+            ->label(__('app.first_name'))
             ->required()
             ->maxLength(255);
     }
@@ -97,7 +97,7 @@ final class Register extends \Filament\Auth\Pages\Register
     private function getLastnameFormComponent(): TextInput
     {
         return TextInput::make('lastname')
-            ->label(__('fields.last_name'))
+            ->label(__('app.last_name'))
             ->required()
             ->maxLength(255);
     }

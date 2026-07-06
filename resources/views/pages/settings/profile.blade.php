@@ -88,7 +88,7 @@ new #[Title('Profile settings')] class extends Component {
 
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your profile details and email address')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="username" :label="__('Username')" type="text" required autofocus autocomplete="username" />
+            <flux:input wire:model="username" :label="__('fields.username')" type="text" required autofocus autocomplete="username" />
             <div class="grid grid-cols-2 gap-4">
                 <flux:input wire:model="firstname" :label="__('fields.first_name')" type="text" required autocomplete="given-name" />
                 <flux:input wire:model="lastname" :label="__('fields.last_name')" type="text" required autocomplete="family-name" />

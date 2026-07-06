@@ -45,18 +45,19 @@ final class PermissionRegistry
                     /** @var string $modelClass */
                     $modelClass = $className::getModel();
                     $modelName = Str::snake(class_basename($modelClass));
+                    $modelLabel = Str::headline($modelName);
 
                     $this->resources[$className] = [
-                        'view_any_' . $modelName => 'View Any ' . Str::headline($modelName),
-                        'view_' . $modelName => 'View ' . Str::headline($modelName),
-                        'create_' . $modelName => 'Create ' . Str::headline($modelName),
-                        'update_' . $modelName => 'Update ' . Str::headline($modelName),
-                        'delete_' . $modelName => 'Delete ' . Str::headline($modelName),
-                        'delete_any_' . $modelName => 'Delete Any ' . Str::headline($modelName),
-                        'force_delete_' . $modelName => 'Force Delete ' . Str::headline($modelName),
-                        'force_delete_any_' . $modelName => 'Force Delete Any ' . Str::headline($modelName),
-                        'restore_' . $modelName => 'Restore ' . Str::headline($modelName),
-                        'restore_any_' . $modelName => 'Restore Any ' . Str::headline($modelName),
+                        'view_any_' . $modelName => __('app.permission_view_any', ['model' => $modelLabel]),
+                        'view_' . $modelName => __('app.permission_view', ['model' => $modelLabel]),
+                        'create_' . $modelName => __('app.permission_create', ['model' => $modelLabel]),
+                        'update_' . $modelName => __('app.permission_update', ['model' => $modelLabel]),
+                        'delete_' . $modelName => __('app.permission_delete', ['model' => $modelLabel]),
+                        'delete_any_' . $modelName => __('app.permission_delete_any', ['model' => $modelLabel]),
+                        'force_delete_' . $modelName => __('app.permission_force_delete', ['model' => $modelLabel]),
+                        'force_delete_any_' . $modelName => __('app.permission_force_delete_any', ['model' => $modelLabel]),
+                        'restore_' . $modelName => __('app.permission_restore', ['model' => $modelLabel]),
+                        'restore_any_' . $modelName => __('app.permission_restore_any', ['model' => $modelLabel]),
                     ];
                 }
             }
@@ -97,8 +98,8 @@ final class PermissionRegistry
     public function getCustomPermissions(): array
     {
         return [
-            'view_horizon' => 'View Horizon Dashboard',
-            'view_pulse' => 'View Pulse Dashboard',
+            'view_horizon' => __('app.permission_view_horizon'),
+            'view_pulse' => __('app.permission_view_pulse'),
         ];
     }
 

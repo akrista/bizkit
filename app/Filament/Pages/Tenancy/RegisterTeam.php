@@ -14,7 +14,7 @@ final class RegisterTeam extends RegisterTenant
 {
     public static function getLabel(): string
     {
-        return __('New Team');
+        return __('app.new_team');
     }
 
     public function form(Schema $schema): Schema
@@ -22,7 +22,7 @@ final class RegisterTeam extends RegisterTenant
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label(__('Team Name'))
+                    ->label(__('app.team_name'))
                     ->required()
                     ->maxLength(255),
             ]);

@@ -14,7 +14,7 @@
             <!-- Username -->
             <flux:input
                 name="username"
-                :label="__('Username')"
+                :label="__('fields.username')"
                 :value="old('username', config('app.env') !== 'production' ? 'devuser' : '')"
                 type="text"
                 required
@@ -95,7 +95,7 @@
                 data-test="team-invitation-login-link"
                 wire:navigate
             >
-                {{ __('Log in') }}
+                {{ __('app.log_in') }}
             </flux:link>
         </div>
     </div>

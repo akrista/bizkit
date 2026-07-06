@@ -25,7 +25,7 @@ final class TeamName implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value)) {
-            $fail(__('The team name must be a string.'));
+            $fail(__('app.validation_team_name_string'));
 
             return;
         }
@@ -33,7 +33,7 @@ final class TeamName implements ValidationRule
         $name = mb_strtolower(mb_trim($value));
 
         if (in_array($name, $this->reservedNames(), true)) {
-            $fail(__('This team name is reserved and cannot be used.'));
+            $fail(__('app.validation_team_name_reserved'));
         }
     }
 
@@ -42,7 +42,7 @@ final class TeamName implements ValidationRule
      *
      * @return array<int, string>
      */
-    protected function reservedNames(): array
+    private function reservedNames(): array
     {
         if ($this->names === null) {
             $this->names = array_merge($this->routesPrefixes(), [
@@ -387,7 +387,7 @@ final class TeamName implements ValidationRule
      *
      * @return array<int, string>
      */
-    protected function routesPrefixes(): array
+    private function routesPrefixes(): array
     {
         return collect(Route::getRoutes()->getRoutes())
             ->map(fn (RouteElement $route) => $route->uri)

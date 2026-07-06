@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
@@ -13,6 +14,7 @@ function createTestZipContent(array $files): string
     foreach ($files as $name => $content) {
         $zip->addFromString('root/' . $name, $content);
     }
+
     $zip->close();
     $zipContent = (string) file_get_contents($tempZipPath);
     @unlink($tempZipPath);
@@ -28,11 +30,12 @@ beforeEach(function () use (&$bizkitJsonBackup): void {
     }
 
     Process::fake([
-        '*' => function (Illuminate\Process\PendingProcess $process) {
+        '*' => function (PendingProcess $process) {
             $cmd = implode(' ', $process->command);
             if (str_contains($cmd, 'where git') || str_contains($cmd, 'which git')) {
                 return Process::result('', 0);
             }
+
             if (str_contains($cmd, 'git status')) {
                 return Process::result('', 0); // clean working tree
             }

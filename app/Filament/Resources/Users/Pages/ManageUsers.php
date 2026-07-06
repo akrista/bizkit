@@ -19,7 +19,7 @@ final class ManageUsers extends ManageRecords
     {
         return [
             CreateAction::make()
-                ->label('Create User'),
+                ->label(__('app.create_user')),
         ];
     }
 

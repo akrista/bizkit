@@ -30,28 +30,28 @@ final class EditProfile extends BaseEditProfile
         return $schema
             ->schema([
                 FileUpload::make('avatar_url')
-                    ->label(__('Avatar'))
+                    ->label(__('fields.avatar'))
                     ->avatar()
                     ->image()
                     ->disk('public')
                     ->directory('avatars')
                     ->columnSpan(2),
                 TextInput::make('username')
-                    ->label(__('Username'))
+                    ->label(__('fields.username'))
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
                     ->validationMessages([
-                        'unique' => __('This username is already taken.'),
+                        'unique' => __('app.validation_username_taken'),
                     ])
                     ->columnSpan(2),
                 TextInput::make('firstname')
-                    ->label('First Name')
+                    ->label(__('app.first_name'))
                     ->required()
                     ->maxLength(255)
                     ->columnSpan(2),
                 TextInput::make('lastname')
-                    ->label('Last Name')
+                    ->label(__('app.last_name'))
                     ->required()
                     ->maxLength(255)
                     ->columnSpan(2),
@@ -63,7 +63,7 @@ final class EditProfile extends BaseEditProfile
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
                     ->validationMessages([
-                        'unique' => __('Este correo electrónico ya está registrado.'),
+                        'unique' => __('app.validation_email_taken'),
                     ]),
                 $this->getPasswordFormComponent()->columnSpan(2),
                 $this->getPasswordConfirmationFormComponent()->columnSpan(2),

@@ -14,16 +14,16 @@ final class UserStatsOverview extends StatsOverviewWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Total de Usuarios', User::withTrashed()->count())
-                ->description('Todos los usuarios registrados')
+            Stat::make(__('fields.total_users'), User::withTrashed()->count())
+                ->description(__('fields.total_users_desc'))
                 ->descriptionIcon(Heroicon::OutlinedUserGroup)
                 ->color('primary'),
-            Stat::make('Usuarios Activos', User::query()->count())
-                ->description('Usuarios no eliminados')
+            Stat::make(__('fields.active_users'), User::query()->count())
+                ->description(__('fields.active_users_desc'))
                 ->descriptionIcon(Heroicon::OutlinedCheckCircle)
                 ->color('success'),
-            Stat::make('Usuarios Eliminados', User::onlyTrashed()->count())
-                ->description('Usuarios en papelera')
+            Stat::make(__('fields.deleted_users'), User::onlyTrashed()->count())
+                ->description(__('fields.deleted_users_desc'))
                 ->descriptionIcon(Heroicon::OutlinedTrash)
                 ->color('danger'),
         ];

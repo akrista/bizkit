@@ -26,7 +26,7 @@ trait HasPermissionFormComponents
     public static function getSelectAllToggle(): Toggle
     {
         return Toggle::make('select_all')
-            ->label(__('Select All'))
+            ->label(__('fields.select_all'))
             ->live()
             ->afterStateHydrated(function (Toggle $component, ?Model $record, Get $get): void {
                 $registry = resolve(PermissionRegistry::class);
@@ -170,7 +170,7 @@ trait HasPermissionFormComponents
         // Tab 4: Custom Permissions
         $customPermissions = $registry->getCustomPermissions();
         if (count($customPermissions) > 0) {
-            $tabs[] = Tab::make(__('Custom Permissions'))
+            $tabs[] = Tab::make(__('resources.custom_permissions'))
                 ->icon(Heroicon::OutlinedKey)
                 ->schema([
                     CheckboxList::make('custom_permissions_tab')

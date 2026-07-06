@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Command;
 use Illuminate\Console\Prohibitable;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\NodePackageManager;
+use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 use function Termwind\terminal;
 
 #[AsCommand(name: 'dev')]
+#[Description('Run the dev processes')]
 final class DevCommand extends Command
 {
     use Prohibitable;
 
+    #[Override]
     protected $name = 'dev';
 
-    protected $description = 'Run the dev processes';
-
-    public function handle(NodePackageManager $packageManager)
+    public function handle(NodePackageManager $packageManager): int
     {
         if ($this->isProhibited()) {
             return self::FAILURE;
@@ -68,7 +70,7 @@ final class DevCommand extends Command
 
         passthru($command, $exitCode);
 
-        $columns === false ? putenv('COLUMNS') : putenv("COLUMNS={$columns}");
+        $columns === false ? putenv('COLUMNS') : putenv('COLUMNS=' . $columns);
 
         return $exitCode;
     }

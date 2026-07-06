@@ -1,12 +1,12 @@
-<x-layouts::auth :title="__('Log in')">
+<x-layouts::auth :title="__('app.log_in')">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email or username and password below to log in')" />
+        <x-auth-header :title="__('app.log_in_to_account')" :description="__('app.log_in_description')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
         @if ($teamInvitation)
-            <x-team-invitation-alert :invitation="$teamInvitation" :action="__('Log in')" />
+            <x-team-invitation-alert :invitation="$teamInvitation" :action="__('app.log_in')" />
         @endif
 
         <x-passkey-verify />
@@ -51,7 +51,7 @@
 
             <div class="flex items-center justify-end">
                 <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
-                    {{ __('Log in') }}
+                    {{ __('app.log_in') }}
                 </flux:button>
             </div>
         </form>

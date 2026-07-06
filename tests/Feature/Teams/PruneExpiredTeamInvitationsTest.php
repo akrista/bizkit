@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 test('expired invitations are deleted by the scheduled cleanup', function (): void {
-    $this->travelTo(now()->startOfDay());
+    $this->travelTo(today());
 
     $owner = User::factory()->create();
     $team = Team::factory()->create();

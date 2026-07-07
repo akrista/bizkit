@@ -74,23 +74,23 @@ RUN apk update; \
     && curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr bash \
     && install-php-extensions \
     apcu \
-    bz2 \
+    # bz2 \
     pcntl \
     mbstring \
     bcmath \
     sockets \
-    pdo_pgsql \
+    # pdo_pgsql \
     opcache \
-    exif \
-    pdo_mysql \
+    # exif \
+    # pdo_mysql \
     zip \
-    uv \
+    # uv \
     intl \
     gd \
     redis \
-    rdkafka \
-    ffi \
-    ldap \
+    # rdkafka \
+    # ffi \
+    # ldap \
     && docker-php-source delete \
     && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
@@ -120,6 +120,7 @@ COPY --link deployment/start-container /usr/local/bin/start-container
 COPY --link deployment/healthcheck /usr/local/bin/healthcheck
 COPY --link deployment/php.ini ${PHP_INI_DIR}/conf.d/99-php.ini
 COPY --link composer.* ./
+RUN mkdir -p /tmp/opcache-file-cache && chmod 777 /tmp/opcache-file-cache
 
 RUN composer install \
     --no-dev \

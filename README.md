@@ -2,6 +2,7 @@
 
 [![Laravel Version](https://img.shields.io/badge/laravel-13.x-red.svg)](https://laravel.com)
 [![PHP Version](https://img.shields.io/badge/php-8.5-blue.svg)](https://php.net)
+[![Packagist Version](https://img.shields.io/packagist/v/akrista/bizkit.svg)](https://packagist.org/packages/akrista/bizkit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
 **Bizkit** is a batteries-included Laravel starter kit based on [Laravel Starter Kits](https://laravel.com/starter-kits). It is designed to serve as a complete and robust baseline to rapidly bootstrap both complex and simple Laravel applications.
@@ -87,7 +88,25 @@ Ensure you have **PHP 8.5+**, **Composer**, **Git**, and **Bun** installed globa
 > [!IMPORTANT]
 > **Windows Users**: Because **Laravel Horizon** requires `pcntl` and `posix` extensions (which are not natively supported on Windows), you should append `--ignore-platform-reqs` to Composer commands (such as `composer require`, `composer update`, or `composer install`).
 
-### Quick Start
+### One-Command Install (Recommended)
+
+The fastest way to bootstrap a new project from Bizkit is via the official [Laravel installer](https://laravel.com/docs/installation#the-laravel-installer). This single command scaffolds a new project called `test`, pulls Bizkit as the template, installs JS/TS assets with **Bun**, and initializes a **Git** repository:
+
+```bash
+laravel new test --using=akrista/bizkit --bun --git
+```
+
+**Flag breakdown:**
+- `--using=akrista/bizkit` — Pulls Bizkit from [Packagist](https://packagist.org/packages/akrista/bizkit) as the project template.
+- `--bun` — Installs frontend dependencies with Bun and runs the initial asset build.
+- `--git` — Initializes a Git repository and creates the initial commit.
+
+> [!TIP]
+> The Laravel installer automatically runs `php artisan key:generate` and migrates the database, so you can skip `composer run setup` for a quick start. Run it afterwards only if you need the full Bizkit bootstrap (Octane, Husky hooks, IDE helpers, etc.).
+
+### Manual Installation
+
+If you prefer explicit control over each step, bootstrap Bizkit via Composer instead:
 
 1. **Bootstrap the project**:
    ```bash

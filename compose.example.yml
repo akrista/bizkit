@@ -34,8 +34,7 @@ x-base: &base
   networks:
     - stack
   volumes:
-    - './storage/app/public:/var/www/html/storage/app/public'
-    - './storage/logs:/var/www/html/storage/logs'
+        - '.:/var/www/html'
   logging: *default-logging
   restart: unless-stopped
 networks:
@@ -60,12 +59,11 @@ services:
       test: ["CMD", "curl", "--fail", "--max-time", "10", "localhost:8000/up"]
       <<: *default-healthcheck
     stop_grace_period: 35s
-  horizon:
-    <<: *base
-    container_name: bizkit-horizon
-    environment:
-      CONTAINER_MODE: horizon
-
+  # horizon:
+  #   <<: *base
+  #   container_name: bizkit-horizon
+  #   environment:
+  #     CONTAINER_MODE: horizon
   scheduler:
     <<: *base
     container_name: bizkit-scheduler
@@ -76,13 +74,13 @@ services:
   #   container_name: bizkit-inertia
   #   environment:
   #     CONTAINER_MODE: ssr
-  reverb:
-    <<: *base
-    container_name: bizkit-reverb
-    ports:
-      - "8080:8080"
-    environment:
-      CONTAINER_MODE: reverb
+  # reverb:
+  #   <<: *base
+  #   container_name: bizkit-reverb
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     CONTAINER_MODE: reverb
   # redis:
   #   profiles: [ app ]
   #   image: 'redis:7-alpine'

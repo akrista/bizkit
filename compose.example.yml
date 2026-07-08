@@ -16,15 +16,14 @@ x-base: &base
   env_file:
     - .env
   build:
-
     context: .
     dockerfile: Dockerfile
     cache_from:
-      - 'laravel/app:latest'
+      - 'akrista/bizkit:latest'
     args:
       USER_ID: ${HOST_UID:-1000}
       GROUP_ID: ${HOST_GID:-1000}
-  image: 'laravel/app:latest'
+  image: 'akrista/bizkit:latest'
   user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
   ulimits:
     nofile:
@@ -54,35 +53,36 @@ networks:
 services:
   app:
     <<: *base
+    container_name: bizkit-app
     ports:
       - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "--fail", "--max-time", "10", "localhost:8000/up"]
       <<: *default-healthcheck
     stop_grace_period: 35s
-
   horizon:
     <<: *base
+    container_name: bizkit-horizon
     environment:
       CONTAINER_MODE: horizon
 
   scheduler:
     <<: *base
+    container_name: bizkit-scheduler
     environment:
       CONTAINER_MODE: scheduler
-
-  inertia:
-    <<: *base
-    environment:
-      CONTAINER_MODE: ssr
-
+  # inertia:
+  #   <<: *base
+  #   container_name: bizkit-inertia
+  #   environment:
+  #     CONTAINER_MODE: ssr
   reverb:
     <<: *base
+    container_name: bizkit-reverb
     ports:
       - "8080:8080"
     environment:
       CONTAINER_MODE: reverb
-
   # redis:
   #   profiles: [ app ]
   #   image: 'redis:7-alpine'

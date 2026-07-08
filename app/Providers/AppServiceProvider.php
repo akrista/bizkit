@@ -56,14 +56,16 @@ final class AppServiceProvider extends ServiceProvider
 
         Model::automaticallyEagerLoadRelationships();
 
-        Sleep::fake();
+        if (app()->runningUnitTests()) {
+            Sleep::fake();
+            Http::preventStrayRequests();
+        }
 
         if (app()->isProduction()) {
             URL::forceHttps();
         }
 
         Date::use(CarbonImmutable::class);
-        Http::preventStrayRequests();
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

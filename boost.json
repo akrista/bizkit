@@ -27,6 +27,7 @@
         "fluxui-development",
         "livewire-development",
         "pest-testing",
+        "echo-development",
         "tailwindcss-development",
         "laravel-permission-development",
         "bizkit-upgrade",

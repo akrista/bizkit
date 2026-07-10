@@ -1,4 +1,4 @@
-name: bizkit
+name: ${STACK_NAME:-bizkit}
 x-logging: &default-logging
   driver: 'json-file'
   options:
@@ -31,30 +31,59 @@ x-base: &base
       hard: 65536
   security_opt:
     - no-new-privileges:true
-  networks:
-    - stack
   volumes:
         - '.:/var/www/html'
   logging: *default-logging
   restart: unless-stopped
+# ---------------------------------------------------------------------------
+# External networks — create them once, before the first `docker compose up`:
+#
+#   docker network create proxy    --subnet 10.10.3.0/24 --gateway 10.10.3.1
+#   docker network create database --subnet 10.10.4.0/24 --gateway 10.10.4.1
+#
+# Drop `--subnet` / `--gateway` if you don't need fixed addressing.
+# Rename via SERVICE_NETWORK / DATABASE_NETWORK in your .env if the defaults
+# (service / database) collide with another stack on the host.
+# ---------------------------------------------------------------------------
 networks:
-  stack:
-    driver: bridge
-    driver_opts:
-      com.docker.network.driver.mtu: 1450
+  proxy:
+    name: ${SERVICE_NETWORK:-service}
+    external: true
+  database:
+    name: ${DATABASE_NETWORK:-database}
+    external: true
 # volumes:
-#   stack-pgsql:
+#   stack-postgis:
 #     driver: local
-#   stack-redis:
+#   stack-mariadb:
+#     driver: local
+#   stack-valkey:
 #     driver: local
 #   stack-rustfs:
 #     driver: local
+# ---------------------------------------------------------------------------
+# Resource sizing guide — `deploy.resources.limits` for heavy services
+# (databases, cache, S3). Pick the tier that matches your host.
+#
+#   Tier       cpus    memory   Typical use
+#   ---------  ------  -------  -------------------------------------------
+#   low-end    0.25    512M     Personal dev, CI runners
+#   mid-end    1-2     2-4G     Small prod, staging                (default)
+#   high-end   4-8     8-16G    Production, heavy spatial / S3 load
+#
+# The commented services below use mid-end limits as the baseline. Swap
+# the values to retune; treat them as *limits* (not reservations) — they
+# protect the host from runaway containers.
+# ---------------------------------------------------------------------------
 services:
   app:
     <<: *base
     container_name: bizkit-app
     ports:
       - "8000:8000"
+    networks:
+      - proxy
+      - database
     healthcheck:
       test: ["CMD", "curl", "--fail", "--max-time", "10", "localhost:8000/up"]
       <<: *default-healthcheck
@@ -64,16 +93,22 @@ services:
   #   container_name: bizkit-horizon
   #   environment:
   #     CONTAINER_MODE: horizon
+  #   networks:
+  #     - database
   scheduler:
     <<: *base
     container_name: bizkit-scheduler
     environment:
       CONTAINER_MODE: scheduler
+    networks:
+      - database
   # inertia:
   #   <<: *base
   #   container_name: bizkit-inertia
   #   environment:
   #     CONTAINER_MODE: ssr
+  #   networks:
+  #     - proxy
   # reverb:
   #   <<: *base
   #   container_name: bizkit-reverb
@@ -81,41 +116,87 @@ services:
   #     - "8080:8080"
   #   environment:
   #     CONTAINER_MODE: reverb
-  # redis:
+  #   networks:
+  #     - proxy
+  # valkey:
   #   profiles: [ app ]
-  #   image: 'redis:7-alpine'
+  #   image: 'valkey/valkey'
+  #   container_name: valkey
   #   ulimits:
   #     nofile:
   #       soft: 65536
   #       hard: 65536
   #   command: [
-  #     "redis-server",
+  #     "valkey-server",
   #     "--requirepass", "${REDIS_PASSWORD}",
   #     "--maxmemory", "${REDIS_MAXMEMORY:-2gb}",
   #     "--maxmemory-policy", "allkeys-lru",
-  #     "--save", "900 1",
-  #     "--save", "300 10",
-  #     "--save", "60 10000"
+  #     "--appendonly", "yes",
+  #     "--appendfsync", "everysec"
   #   ]
   #   security_opt:
   #     - no-new-privileges:true
   #   volumes:
-  #     - 'stack-redis:/data'
+  #     - 'stack-valkey:/data'
   #   networks:
-  #     - stack
+  #     - database
   #   logging: *default-logging
   #   healthcheck:
-  #     test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+  #     test: ["CMD", "valkey-cli", "--pass", "${REDIS_PASSWORD}", "--raw", "incr", "ping"]
   #     <<: *default-healthcheck
   #   restart: unless-stopped
   #   deploy:
   #     resources:
   #       limits:
-  #         memory: 2.5G
+  #         # low-end:  cpus: "0.25" memory: 512M
+  #         # mid-end:  cpus: "1"    memory: 2G    <-- current
+  #         # high-end: cpus: "4"    memory: 8G
+  #         cpus: "1"
+  #         memory: 2G
 
-  # pgsql:
+  # postgis:
   #   profiles: [ app ]
-  #   image: 'postgres:${POSTGRES_VERSION:-18}-alpine'
+  #   image: 'postgis/postgis:18-3.6-alpine'
+  #   container_name: postgis
+  #   ulimits:
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   environment:
+  #     TZ: ${TZ:-America/Caracas}
+  #     PGPASSWORD: '${DB_PASSWORD}'
+  #     POSTGRES_DB: '${DB_DATABASE}'
+  #     POSTGRES_USER: '${DB_USERNAME}'
+  #     POSTGRES_PASSWORD: '${DB_PASSWORD}'
+  #     POSTGRES_INITDB_ARGS: '--data-checksums'
+  #   volumes:
+  #     - 'stack-postgis:/var/lib/postgresql'
+  #     - './deployment/postgresql.conf:/etc/postgresql/postgresql.conf:ro'
+  #   networks:
+  #     - database
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "${DB_USERNAME}", "-d", "${DB_DATABASE}"]
+  #     start_period: 1m
+  #     start_interval: 10s
+  #     <<: *default-healthcheck
+  #   restart: unless-stopped
+  #   logging: *default-logging
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         # low-end:  cpus: "0.5"  memory: 1G
+  #         # mid-end:  cpus: "2"    memory: 4G   <-- current
+  #         # high-end: cpus: "8"    memory: 16G
+  #         cpus: "2"
+  #         memory: 4G
+
+  # mariadb:
+  #   profiles: [ app ]
+  #   image: 'mariadb'
+  #   container_name: mariadb
   #   ulimits:
   #     nofile:
   #       soft: 65536
@@ -123,19 +204,32 @@ services:
   #   security_opt:
   #     - no-new-privileges:true
   #   environment:
-  #     PGPASSWORD: '${DB_PASSWORD}'
-  #     POSTGRES_DB: '${DB_DATABASE}'
-  #     POSTGRES_USER: '${DB_USERNAME}'
-  #     POSTGRES_PASSWORD: '${DB_PASSWORD}'
+  #     TZ: ${TZ:-America/Caracas}
+  #     MARIADB_ROOT_PASSWORD: '${DB_PASSWORD}'
+  #     MARIADB_DATABASE: '${DB_DATABASE}'
+  #     # Optional: create a non-root app user
+  #     # MARIADB_USER: '${DB_USERNAME}'
+  #     # MARIADB_PASSWORD: '${DB_PASSWORD}'
   #   volumes:
-  #     - 'stack-pgsql:/var/lib/postgresql'
+  #     - 'stack-mariadb:/var/lib/mysql'
+  #     - './deployment/custom.cnf:/etc/mysql/conf.d/custom.cnf:ro'
   #   networks:
-  #     - stack
+  #     - database
   #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+  #     test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+  #     start_period: 1m
+  #     start_interval: 10s
   #     <<: *default-healthcheck
   #   restart: unless-stopped
   #   logging: *default-logging
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         # low-end:  cpus: "0.5"  memory: 1G
+  #         # mid-end:  cpus: "2"    memory: 4G   <-- current
+  #         # high-end: cpus: "8"    memory: 16G
+  #         cpus: "2"
+  #         memory: 4G
 
   # rustfs:
   #   profiles: [ app ]
@@ -159,7 +253,7 @@ services:
   #   volumes:
   #     - 'stack-rustfs:/data'
   #   networks:
-  #     - stack
+  #     - proxy
   #   restart: unless-stopped
   #   logging: *default-logging
   #   healthcheck:
@@ -169,3 +263,11 @@ services:
   #       "curl -f http://127.0.0.1:9000/health && curl -f http://127.0.0.1:9001/health"
   #     ]
   #     <<: *default-healthcheck
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         # low-end:  cpus: "0.25" memory: 512M
+  #         # mid-end:  cpus: "1"    memory: 2G    <-- current
+  #         # high-end: cpus: "4"    memory: 8G
+  #         cpus: "1"
+  #         memory: 2G

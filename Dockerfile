@@ -61,16 +61,16 @@ RUN apk update; \
     apk upgrade; \
     apk add --no-cache \
     curl \
-    wget \
-    vim \
+    # wget \
+    # neovim \
     tzdata \
-    ncdu \
+    # ncdu \
     procps \
-    unzip \
+    # unzip \
     ca-certificates \
     bash \
     supervisor \
-    libsodium-dev \
+    # libsodium-dev \
     && curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr bash \
     && install-php-extensions \
     apcu \
@@ -164,4 +164,3 @@ EXPOSE 8080
 ENTRYPOINT ["start-container"]
 
 HEALTHCHECK --start-period=15s --interval=10s --timeout=5s --retries=3 CMD healthcheck || exit 1
-

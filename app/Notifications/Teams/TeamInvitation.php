@@ -32,6 +32,9 @@ final class TeamInvitation extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    /**
+     * Get the mail representation of the notification.
+     */
     public function toMail(object $notifiable): MailMessage
     {
         $team = $this->invitation->team;

@@ -14,6 +14,7 @@ use App\Http\Responses\VerifyEmailResponse;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -66,17 +67,17 @@ final class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request): View => view('pages::auth.login', [
+        Fortify::loginView(fn (Request $request): Factory | View => view('pages::auth.login', [
             'teamInvitation' => $this->teamInvitation($request),
         ]));
-        Fortify::verifyEmailView(fn (): View => view('pages::auth.verify-email'));
-        Fortify::twoFactorChallengeView(fn (): View => view('pages::auth.two-factor-challenge'));
-        Fortify::confirmPasswordView(fn (): View => view('pages::auth.confirm-password'));
-        Fortify::registerView(fn (Request $request): View => view('pages::auth.register', [
+        Fortify::verifyEmailView(fn (): Factory | View => view('pages::auth.verify-email'));
+        Fortify::twoFactorChallengeView(fn (): Factory | View => view('pages::auth.two-factor-challenge'));
+        Fortify::confirmPasswordView(fn (): Factory | View => view('pages::auth.confirm-password'));
+        Fortify::registerView(fn (Request $request): Factory | View => view('pages::auth.register', [
             'teamInvitation' => $this->teamInvitation($request),
         ]));
-        Fortify::resetPasswordView(fn (): View => view('pages::auth.reset-password'));
-        Fortify::requestPasswordResetLinkView(fn (): View => view('pages::auth.forgot-password'));
+        Fortify::resetPasswordView(fn (): Factory | View => view('pages::auth.reset-password'));
+        Fortify::requestPasswordResetLinkView(fn (): Factory | View => view('pages::auth.forgot-password'));
     }
 
     /**
@@ -84,22 +85,19 @@ final class FortifyServiceProvider extends ServiceProvider
      */
     private function configureRateLimiting(): void
     {
-        RateLimiter::for('two-factor', fn (Request $request) => Limit::perMinute(5)->by($request->session()->get('login.id')));
+        RateLimiter::for('two-factor', fn(Request $request) => Limit::perMinute(5)->by($request->session()->get('login.id')));
 
         RateLimiter::for('login', function (Request $request) {
-            $username = $request->input(Fortify::username());
-            $usernameString = is_string($username) ? $username : '';
-            $throttleKey = Str::transliterate(Str::lower($usernameString) . '|' . $request->ip());
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });
 
         RateLimiter::for('passkeys', function (Request $request) {
             $credentialId = $request->input('credential.id');
-            $credentialIdString = is_string($credentialId) ? $credentialId : '';
 
             return Limit::perMinute(10)->by(
-                ($credentialIdString ?: $request->session()->getId()) . '|' . $request->ip(),
+                ($credentialId ?: $request->session()->getId()) . '|' . $request->ip(),
             );
         });
     }

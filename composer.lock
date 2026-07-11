@@ -1004,16 +1004,16 @@
         },
         {
             "name": "dedoc/scramble",
-            "version": "v0.13.32",
+            "version": "v0.13.33",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dedoc/scramble.git",
-                "reference": "546a727720d4c38f2248e7c63b43178fbea7a96e"
+                "reference": "2ef252b17842336a7dcfcf0208e6e0b0085abd47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dedoc/scramble/zipball/546a727720d4c38f2248e7c63b43178fbea7a96e",
-                "reference": "546a727720d4c38f2248e7c63b43178fbea7a96e",
+                "url": "https://api.github.com/repos/dedoc/scramble/zipball/2ef252b17842336a7dcfcf0208e6e0b0085abd47",
+                "reference": "2ef252b17842336a7dcfcf0208e6e0b0085abd47",
                 "shasum": ""
             },
             "require": {
@@ -1073,7 +1073,7 @@
             ],
             "support": {
                 "issues": "https://github.com/dedoc/scramble/issues",
-                "source": "https://github.com/dedoc/scramble/tree/v0.13.32"
+                "source": "https://github.com/dedoc/scramble/tree/v0.13.33"
             },
             "funding": [
                 {
@@ -1081,7 +1081,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-07-09T09:04:02+00:00"
+            "time": "2026-07-11T09:18:44+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
@@ -16199,12 +16199,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Roave/SecurityAdvisories.git",
-                "reference": "c07b0e39a3b653e4910b4fa3ce5b7933e85c48a3"
+                "reference": "d162f89e37b3026c5b00680c8e64b70d3ad57024"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/c07b0e39a3b653e4910b4fa3ce5b7933e85c48a3",
-                "reference": "c07b0e39a3b653e4910b4fa3ce5b7933e85c48a3",
+                "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/d162f89e37b3026c5b00680c8e64b70d3ad57024",
+                "reference": "d162f89e37b3026c5b00680c8e64b70d3ad57024",
                 "shasum": ""
             },
             "conflict": {
@@ -16888,7 +16888,7 @@
                 "prestashop/ps_checkout": "<5.3",
                 "prestashop/ps_contactinfo": "<=3.3.2",
                 "prestashop/ps_emailsubscription": "<2.6.1",
-                "prestashop/ps_facetedsearch": "<3.4.1",
+                "prestashop/ps_facetedsearch": "<4.0.4",
                 "prestashop/ps_linklist": "<3.1",
                 "privatebin/privatebin": "<1.4|>=1.5,<1.7.4|>=1.7.7,<2.0.3",
                 "processwire/processwire": "<=3.0.255",
@@ -17312,7 +17312,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-07-10T20:22:29+00:00"
+            "time": "2026-07-10T22:02:12+00:00"
         },
         {
             "name": "sebastian/cli-parser",

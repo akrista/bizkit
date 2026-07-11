@@ -91,13 +91,13 @@
             "@php artisan ide-helper:meta"
         ],
         "lint": [
-            "rector",
-            "pint --parallel",
-            "pint --parallel --config=pint.filament.json app/Filament"
+            "vendor/bin/rector",
+            "vendor/bin/pint --parallel",
+            "vendor/bin/pint --parallel --config=pint.filament.json app/Filament"
         ],
         "lint:check": [
-            "pint --parallel --test",
-            "pint --parallel --test --config=pint.filament.json app/Filament"
+            "vendor/bin/pint --parallel --test",
+            "vendor/bin/pint --parallel --test --config=pint.filament.json app/Filament"
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
@@ -105,9 +105,9 @@
         ],
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:lint": [
-            "pint --parallel --test",
-            "pint --parallel --test --config=pint.filament.json app/Filament",
-            "rector --dry-run"
+            "vendor/bin/pint --parallel --test",
+            "vendor/bin/pint --parallel --test --config=pint.filament.json app/Filament",
+            "vendor/bin/rector --dry-run"
         ],
         "test:unit": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0",
         "test:types": "phpstan --memory-limit=256M",

@@ -153,6 +153,58 @@ If you encounter `composer: command not found` or `php: command not found` error
 
 ---
 
+## Docker Deployment
+
+Bizkit comes with a production-ready, high-performance Docker setup powered by **FrankenPHP** and **Supervisor**. 
+
+### 1. Running with Docker Compose
+
+To spin up the application stack locally:
+1. **Copy the example Compose file**:
+   ```bash
+   cp compose.example.yml compose.yml
+   ```
+2. **Configure your Environment**:
+   Make sure you have a `.env` file generated with `composer run setup` or by copying `.env.example`.
+3. **Start the containers**:
+   ```bash
+   docker compose up --build -d
+   ```
+
+By default, this launches two services:
+- **`bizkit-app`**: FrankenPHP web server listening on port `8000`.
+- **`bizkit-scheduler`**: Supervisor-managed container running Laravel's task scheduler.
+
+---
+
+### 2. HTTPS & SSL Requirements (Critical for Production)
+
+For any production or public deployment, **Bizkit must be served over HTTPS**. 
+
+#### Why HTTPS is Required
+- **Passkeys / WebAuthn**: Browser security specifications strictly restrict WebAuthn APIs to secure contexts (HTTPS). Passkey registration and login will fail entirely on unencrypted HTTP.
+- **Two-Factor Authentication (2FA) & Session Security**: Secure session cookies and 2FA credential transfers require SSL to prevent intercept attacks.
+
+#### Production SSL Setup
+To deploy securely, you should place Bizkit behind a reverse proxy or SSL termination layer (e.g., **Traefik**, **Nginx**, **Cloudflare**, or a frontend **Caddy** load balancer):
+
+1. **Proxy Configuration**: Direct your external proxy to route HTTPS traffic (port `443`) to port `8000` (HTTP) of the `bizkit-app` container.
+2. **Environment Variables**: Update the following variables in your production `.env` file:
+   ```env
+   APP_URL=https://your-domain.com
+   OCTANE_HTTPS=true
+   ```
+   Setting `OCTANE_HTTPS=true` ensures Laravel correctly generates `https://` URLs for assets, routing redirects, and secure cookies.
+3. **HSTS (HTTP Strict Transport Security)**:
+   The [`deployment/Caddyfile`](file:///home/akrista/Dev/Github/notakrista/bizkit/deployment/Caddyfile) includes high-security headers. For production, you should uncomment the HSTS header in the Caddyfile:
+   ```caddy
+   Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+   ```
+   > [!WARNING]
+   > Do not uncomment HSTS during local development, or browsers will cache the rule and prevent access to local IP/localhost connections over HTTP, resulting in `SSL_ERROR_RX_RECORD_TOO_LONG` errors.
+
+---
+
 ## Future Roadmap
 
 The following features are planned for future releases of Bizkit:

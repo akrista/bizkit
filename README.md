@@ -86,7 +86,7 @@ When file differences are detected, the command runs an interactive diff selecti
 Ensure you have **PHP 8.5+**, **Composer**, **Git**, and **Bun** installed globally.
 
 > [!IMPORTANT]
-> **Windows Users**: Because **Laravel Horizon** requires `pcntl` and `posix` extensions (which are not natively supported on Windows), you should append `--ignore-platform-reqs` to Composer commands (such as `composer require`, `composer update`, or `composer install`).
+> **Windows Users**: Because **Laravel Horizon** requires `pcntl` and `posix` extensions (which are not natively supported on Windows), use the [Manual Installation](#manual-installation) section below with the `--ignore-platform-reqs` flag. Horizon itself will not run on Windows — skip it or run your app via WSL/Herd if you need a queue worker.
 
 ### One-Command Install (Recommended)
 
@@ -110,7 +110,13 @@ If you prefer explicit control over each step, bootstrap Bizkit via Composer ins
 
 1. **Bootstrap the project**:
    ```bash
+   # macOS / Linux / WSL
    composer create-project akrista/bizkit my-awesome-app
+
+   # Windows (Horizon requires pcntl/posix, unavailable on Windows)
+   composer create-project --ignore-platform-reqs akrista/bizkit my-awesome-app
+   ```
+   ```bash
    cd my-awesome-app
    ```
 

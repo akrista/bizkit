@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\TeamRole;
+use Database\Factories\MembershipFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,6 +22,7 @@ use Override;
 #[Table(name: 'team_members')]
 final class Membership extends Pivot
 {
+    /** @use HasFactory<MembershipFactory> */
     use HasFactory;
 
     /**

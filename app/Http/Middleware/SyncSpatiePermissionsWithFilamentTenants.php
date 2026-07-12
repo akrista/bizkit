@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Team;
 use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ final class SyncSpatiePermissionsWithFilamentTenants
     {
         $tenant = Filament::getTenant();
 
-        if ($tenant !== null && auth()->check()) {
+        if ($tenant instanceof Team && auth()->check()) {
             $tenantId = (string) $tenant->getKey();
 
             if (getPermissionsTeamId() !== $tenantId) {

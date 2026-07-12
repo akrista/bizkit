@@ -12,3 +12,8 @@ parameters:
         - routes
     level: max
     tmpDir: /tmp/phpstan
+    ignoreErrors:
+        -
+            identifier: 'classConstant.internalClass'
+            paths:
+                - config/pulse.php

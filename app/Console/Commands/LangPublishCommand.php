@@ -162,10 +162,15 @@ final class LangPublishCommand extends Command
         $languages = $this->option('lang');
 
         if (empty($languages)) {
-            return array_unique(array_filter([
-                config('app.locale'),
-                config('app.fallback_locale'),
-            ]));
+            $locale = config('app.locale');
+            $fallback = config('app.fallback_locale');
+
+            $candidates = array_filter([
+                is_string($locale) ? $locale : null,
+                is_string($fallback) ? $fallback : null,
+            ], static fn (?string $value): bool => $value !== null && $value !== '');
+
+            return array_values(array_unique($candidates));
         }
 
         $parsed = [];
@@ -203,22 +208,35 @@ final class LangPublishCommand extends Command
         $directories = File::directories($vendorPath);
 
         foreach ($directories as $packageDir) {
-            // Delete unwanted locale subdirectories (e.g. lang/vendor/package/es)
+            if (! is_string($packageDir)) {
+                continue;
+            }
+
+            if (! File::isDirectory($packageDir)) {
+                continue;
+            }
+
             $locales = File::directories($packageDir);
             foreach ($locales as $localeDir) {
-                $locale = basename((string) $localeDir);
+                if (! is_string($localeDir)) {
+                    continue;
+                }
+
+                $locale = basename($localeDir);
                 if (! in_array($locale, $languagesToKeep, true)) {
                     File::deleteDirectory($localeDir);
                 }
             }
 
-            // Delete unwanted JSON translation files (e.g. lang/vendor/package/es.json)
             $files = File::files($packageDir);
             foreach ($files as $file) {
                 if ($file->getExtension() === 'json') {
                     $locale = $file->getBasename('.json');
                     if (! in_array($locale, $languagesToKeep, true)) {
-                        File::delete($file->getRealPath());
+                        $realPath = $file->getRealPath();
+                        if (is_string($realPath)) {
+                            File::delete($realPath);
+                        }
                     }
                 }
             }

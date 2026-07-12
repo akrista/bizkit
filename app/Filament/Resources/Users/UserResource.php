@@ -36,11 +36,11 @@ use Filament\Tables\Columns\Layout\Component;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Override;
+use Spatie\Permission\Support\Config;
 
 final class UserResource extends Resource
 {
@@ -72,7 +72,7 @@ final class UserResource extends Resource
         return __('resources.users');
     }
 
-    public static function getGlobalSearchResultTitle(Model $record): string | Htmlable
+    public static function getGlobalSearchResultTitle(Model $record): string
     {
         /** @var User $record */
         return $record->email;
@@ -92,7 +92,7 @@ final class UserResource extends Resource
         ];
     }
 
-    public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): string
     {
         return __('menu.nav_group.settings');
     }
@@ -171,13 +171,13 @@ final class UserResource extends Resource
                                                 'roles',
                                                 'name',
                                                 modifyQueryUsing: fn (Builder $query): Builder => $query->where(
-                                                    $query->getModel()->getTable() . '.' . config('permission.column_names.team_foreign_key'),
+                                                    $query->getModel()->getTable() . '.' . Config::teamForeignKey(),
                                                     getPermissionsTeamId()
                                                 )
                                             )
                                             ->saveRelationshipsUsing(function (User $record, array $state): void {
                                                 $record->roles()->syncWithPivotValues($state, [
-                                                    config('permission.column_names.team_foreign_key') => getPermissionsTeamId(),
+                                                    Config::teamForeignKey() => getPermissionsTeamId(),
                                                 ]);
                                             })
                                             ->helperText(__('fields.helper_select_roles')),
@@ -312,7 +312,7 @@ final class UserResource extends Resource
                 ->getStateUsing(fn (User $record): ?string => $record->getFilamentAvatarUrl()),
             TextColumn::make('firstname')
                 ->label(__('fields.name'))
-                ->formatStateUsing(fn ($record): string => $record->firstname . ' ' . $record->lastname)
+                ->formatStateUsing(fn (User $record): string => $record->firstname . ' ' . $record->lastname)
                 ->searchable(['firstname', 'lastname'])
                 ->sortable()
                 ->weight('bold')

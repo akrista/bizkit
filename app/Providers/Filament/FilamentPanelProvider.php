@@ -54,7 +54,7 @@ final class FilamentPanelProvider extends PanelProvider
             )
             ->multiFactorAuthentication([
                 AppAuthentication::make()
-                    ->brandName(config('app.name'))
+                    ->brandName(is_string(config('app.name')) ? config('app.name') : null)
                     ->codeWindow(6)
                     ->recoverable()
                     ->regenerableRecoveryCodes(),

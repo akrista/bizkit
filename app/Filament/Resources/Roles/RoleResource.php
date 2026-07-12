@@ -60,7 +60,7 @@ final class RoleResource extends Resource
         return __('resources.roles');
     }
 
-    public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): string
     {
         return __('menu.nav_group.settings');
     }

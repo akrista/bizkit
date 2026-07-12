@@ -11,8 +11,7 @@ use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\NodePackageManager;
 use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
-
-use function Termwind\terminal;
+use Symfony\Component\Console\Terminal as ConsoleTerminal;
 
 #[AsCommand(name: 'dev')]
 #[Description('Run the dev processes')]
@@ -35,11 +34,12 @@ final class DevCommand extends Command
         $colors = array_column($devCommands, 'color');
         $names = array_column($devCommands, 'name');
 
-        $longestName = max(array_map(strlen(...), $names));
+        $longestName = $names === [] ? 0 : max(array_map(strlen(...), $names));
 
         $columns = getenv('COLUMNS');
 
-        putenv('COLUMNS=' . max(terminal()->width() - $longestName - 4, 1));
+        $terminalWidth = new ConsoleTerminal()->getWidth();
+        putenv('COLUMNS=' . max($terminalWidth - $longestName - 4, 1));
 
         $this->line('');
 

@@ -12,4 +12,5 @@ return [
 
     'admin_password' => env('ADMIN_PASSWORD', 'password'),
 
+    'github_token' => env('GITHUB_TOKEN'),
 ];

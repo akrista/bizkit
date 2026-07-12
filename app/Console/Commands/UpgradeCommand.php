@@ -315,6 +315,10 @@ final class UpgradeCommand extends Command
         if ($zip->open($tempFile) === true) {
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
+                if ($stat === false) {
+                    continue;
+                }
+
                 $zipPath = $stat['name'];
 
                 $parts = explode('/', str_replace('\\', '/', $zipPath));
@@ -653,7 +657,7 @@ final class UpgradeCommand extends Command
      */
     private function getAuthHeader(): array
     {
-        $token = env('GITHUB_TOKEN');
+        $token = config('bizkit.github_token');
 
         if (! $token && $this->commandExists('gh')) {
             $tokenResult = Process::run(['gh', 'auth', 'token']);
@@ -662,7 +666,7 @@ final class UpgradeCommand extends Command
             }
         }
 
-        if ($token) {
+        if (is_string($token) && $token !== '') {
             return ['Authorization' => 'Bearer ' . $token];
         }
 

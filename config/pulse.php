@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Laravel\Pulse\Http\Middleware\Authorize;
-use Laravel\Pulse\Pulse;
 use Laravel\Pulse\Recorders\CacheInteractions;
 use Laravel\Pulse\Recorders\Exceptions;
 use Laravel\Pulse\Recorders\Queues;
@@ -152,7 +151,14 @@ return [
             'enabled' => env('PULSE_CACHE_INTERACTIONS_ENABLED', true),
             'sample_rate' => env('PULSE_CACHE_INTERACTIONS_SAMPLE_RATE', 1),
             'ignore' => [
-                ...Pulse::defaultVendorCacheKeys(),
+                '/(^laravel_vapor_job_attemp(t?)s:)/',
+                '/^.+@.+\|(?:(?:\d+\.\d+\.\d+\.\d+)|[0-9a-fA-F:]+)(?::timer)?$/',
+                '/^[a-zA-Z0-9]{40}$/',
+                '/^illuminate:/',
+                '/^laravel:pulse:/',
+                '/^laravel:reverb:/',
+                '/^nova/',
+                '/^telescope:/',
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',

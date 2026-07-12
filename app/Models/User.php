@@ -32,8 +32,17 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Override;
+use SensitiveParameter;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int|string|null $id
+ * @property-read string $name
+ * @property ?string $filament_authentication_secret
+ * @property ?array<string> $filament_authentication_recovery_codes
+ *
+ * @mixin Model
+ */
 #[Fillable([
     'username',
     'firstname',
@@ -83,7 +92,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 
     public function initials(): string
     {
-        $initials = Str::initials($this->name, true);
+        $initials = Str::initials($this->firstname . ' ' . $this->lastname, true);
 
         return Str::length($initials) > 1
             ? Str::substr($initials, 0, 1) . Str::substr($initials, -1)
@@ -127,7 +136,9 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
             return (string) $this->email;
         }
 
-        return (string) $this->getAttribute($this->getKeyName());
+        $key = $this->getKey();
+
+        return is_string($key) ? $key : '';
     }
 
     public function getAvatarUrl(): ?string
@@ -164,12 +175,18 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         return $this->email;
     }
 
+    /**
+     * @return ?array<string>
+     */
     public function getAppAuthenticationRecoveryCodes(): ?array
     {
         return $this->filament_authentication_recovery_codes;
     }
 
-    public function saveAppAuthenticationRecoveryCodes(?array $codes): void
+    /**
+     * @param  ?array<string>  $codes
+     */
+    public function saveAppAuthenticationRecoveryCodes(#[SensitiveParameter] ?array $codes): void
     {
         $this->filament_authentication_recovery_codes = $codes;
         $this->save();
@@ -186,6 +203,9 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         $this->save();
     }
 
+    /**
+     * @return Attribute<string, never>
+     */
     protected function name(): Attribute
     {
         return Attribute::make(get: fn (): string => sprintf('%s %s', $this->firstname, $this->lastname));
@@ -198,7 +218,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'filament_authentication_secret' => 'encrypted',
-            'filament_authentication_recovery_codes' => 'encrypted',
+            'filament_authentication_recovery_codes' => 'encrypted:array',
         ];
     }
 }

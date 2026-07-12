@@ -40,11 +40,14 @@ final class TeamInvitation extends Notification implements ShouldQueue
         $team = $this->invitation->team;
         $inviter = $this->invitation->inviter;
 
+        $teamName = $team !== null ? $team->name : '';
+        $inviterName = $inviter !== null ? $inviter->name : '';
+
         return (new MailMessage)
-            ->subject(__('app.notification_invitation_subject', ['teamName' => $team->name]))
+            ->subject(__('app.notification_invitation_subject', ['teamName' => $teamName]))
             ->line(__('app.notification_invitation_line1', [
-                'inviterName' => $inviter->name,
-                'teamName' => $team->name,
+                'inviterName' => $inviterName,
+                'teamName' => $teamName,
             ]))
             ->line(__('app.notification_invitation_line2'))
             ->action(
@@ -60,10 +63,13 @@ final class TeamInvitation extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
+        $team = $this->invitation->team;
+        $teamName = $team !== null ? $team->name : '';
+
         return [
             'invitation_id' => $this->invitation->id,
             'team_id' => $this->invitation->team_id,
-            'team_name' => $this->invitation->team->name,
+            'team_name' => $teamName,
             'role' => $this->invitation->role->value,
         ];
     }

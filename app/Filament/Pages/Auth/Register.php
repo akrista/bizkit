@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Auth;
 
 use App\Actions\Teams\CreateTeam;
+use App\Models\User;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
@@ -44,7 +45,7 @@ final class Register extends \Filament\Auth\Pages\Register
     protected function handleRegistration(array $data): Model
     {
         return DB::transaction(function () use ($data) {
-            $user = $this->getUserModel()::query()->create([
+            $user = User::query()->create([
                 'username' => $data['username'],
                 'firstname' => $data['firstname'],
                 'lastname' => $data['lastname'],
@@ -53,7 +54,17 @@ final class Register extends \Filament\Auth\Pages\Register
             ]);
 
             $createTeam = resolve(CreateTeam::class);
-            $createTeam->handle($user, __('app.personal_team', ['name' => sprintf('%s %s', $data['firstname'], $data['lastname'])]), isPersonal: true);
+            $createTeam->handle(
+                $user,
+                __('app.personal_team', [
+                    'name' => sprintf(
+                        '%s %s',
+                        is_string($data['firstname'] ?? null) ? $data['firstname'] : '',
+                        is_string($data['lastname'] ?? null) ? $data['lastname'] : '',
+                    ),
+                ]),
+                isPersonal: true,
+            );
 
             return $user;
         });

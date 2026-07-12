@@ -21,7 +21,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.2",
     "husky": "^9.1.7",
-    "laravel-echo": "^2.3.7",
+    "laravel-echo": "^2.4.0",
     "pusher-js": "^8.5.0",
     "tailwindcss": "^4.3.2"
   }

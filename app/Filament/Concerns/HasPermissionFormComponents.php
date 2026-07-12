@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
-use App\Models\Permission;
+use App\Models\Role;
 use App\Services\PermissionRegistry;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Toggle;
@@ -14,7 +14,6 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -90,16 +89,11 @@ trait HasPermissionFormComponents
                             'lg' => 3,
                         ])
                         ->afterStateHydrated(function (CheckboxList $component, ?Model $record) use ($permissions): void {
-                            if (!$record instanceof Model) {
+                            $rolePermissions = self::resolveRolePermissions($record);
+                            if ($rolePermissions === null) {
                                 return;
                             }
 
-                            /** @var Collection<Permission> $permissionsRelation */
-                            $permissionsRelation = $record->relationLoaded('permissions')
-                                ? $record->permissions
-                                : $record->permissions()->get();
-
-                            $rolePermissions = $permissionsRelation->pluck('name')->toArray();
                             $component->state(array_intersect(array_keys($permissions), $rolePermissions));
                         }),
                 ]);
@@ -123,16 +117,11 @@ trait HasPermissionFormComponents
                             'sm' => 2,
                         ])
                         ->afterStateHydrated(function (CheckboxList $component, ?Model $record) use ($pagesPermissions): void {
-                            if (!$record instanceof Model) {
+                            $rolePermissions = self::resolveRolePermissions($record);
+                            if ($rolePermissions === null) {
                                 return;
                             }
 
-                            /** @var Collection<Permission> $permissionsRelation */
-                            $permissionsRelation = $record->relationLoaded('permissions')
-                                ? $record->permissions
-                                : $record->permissions()->get();
-
-                            $rolePermissions = $permissionsRelation->pluck('name')->toArray();
                             $component->state(array_intersect(array_keys($pagesPermissions), $rolePermissions));
                         }),
                 ]);
@@ -152,16 +141,11 @@ trait HasPermissionFormComponents
                             'sm' => 2,
                         ])
                         ->afterStateHydrated(function (CheckboxList $component, ?Model $record) use ($widgetsPermissions): void {
-                            if (!$record instanceof Model) {
+                            $rolePermissions = self::resolveRolePermissions($record);
+                            if ($rolePermissions === null) {
                                 return;
                             }
 
-                            /** @var Collection<Permission> $permissionsRelation */
-                            $permissionsRelation = $record->relationLoaded('permissions')
-                                ? $record->permissions
-                                : $record->permissions()->get();
-
-                            $rolePermissions = $permissionsRelation->pluck('name')->toArray();
                             $component->state(array_intersect(array_keys($widgetsPermissions), $rolePermissions));
                         }),
                 ]);
@@ -181,16 +165,11 @@ trait HasPermissionFormComponents
                             'sm' => 2,
                         ])
                         ->afterStateHydrated(function (CheckboxList $component, ?Model $record) use ($customPermissions): void {
-                            if (!$record instanceof Model) {
+                            $rolePermissions = self::resolveRolePermissions($record);
+                            if ($rolePermissions === null) {
                                 return;
                             }
 
-                            /** @var Collection<Permission> $permissionsRelation */
-                            $permissionsRelation = $record->relationLoaded('permissions')
-                                ? $record->permissions
-                                : $record->permissions()->get();
-
-                            $rolePermissions = $permissionsRelation->pluck('name')->toArray();
                             $component->state(array_intersect(array_keys($customPermissions), $rolePermissions));
                         }),
                 ]);
@@ -199,5 +178,27 @@ trait HasPermissionFormComponents
         return Tabs::make('permissions_tabs')
             ->tabs($tabs)
             ->columnSpanFull();
+    }
+
+    /**
+     * Resolve the names of all permissions currently attached to the given role record.
+     *
+     * @return array<int, string>|null
+     */
+    private static function resolveRolePermissions(?Model $record): ?array
+    {
+        if (! $record instanceof Role) {
+            return null;
+        }
+
+        $permissionsRelation = $record->relationLoaded('permissions')
+            ? $record->permissions
+            : $record->permissions()->get();
+
+        return $permissionsRelation
+            ->pluck('name')
+            ->map(static fn(mixed $name): string => is_string($name) ? $name : '')
+            ->values()
+            ->all();
     }
 }

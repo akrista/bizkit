@@ -6,29 +6,37 @@ namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
 use App\Models\Permission;
+use App\Models\Role;
 use App\Services\PermissionRegistry;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Override;
 
 final class CreateRole extends CreateRecord
 {
+    /** @var Collection<int, string> */
     public Collection $permissions;
 
     #[Override]
     protected static string $resource = RoleResource::class;
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $this->permissions = $this->extractPermissionsFromData($data);
 
-        return Arr::only($data, ['name', 'guard_name']);
+        return [
+            'name' => is_string($data['name'] ?? null) ? $data['name'] : '',
+            'guard_name' => is_string($data['guard_name'] ?? null) ? $data['guard_name'] : 'web',
+        ];
     }
 
     protected function afterCreate(): void
     {
-        $guardName = $this->data['guard_name'] ?? 'web';
+        $guardName = is_string($this->data['guard_name'] ?? null) ? $this->data['guard_name'] : 'web';
 
         $permissionModels = $this->permissions->map(
             fn (string $permission): Permission => Permission::query()->firstOrCreate([
@@ -37,15 +45,21 @@ final class CreateRole extends CreateRecord
             ])
         );
 
-        $this->record->syncPermissions($permissionModels);
+        $record = $this->record;
+        if ($record instanceof Role) {
+            $record->syncPermissions($permissionModels);
+        }
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return Collection<int, string>
+     */
     private function extractPermissionsFromData(array $data): Collection
     {
         $registry = resolve(PermissionRegistry::class);
         $excludedKeys = ['name', 'guard_name', 'select_all'];
 
-        // Get all resource FQCNs to identify permission arrays
         $resourceKeys = collect($registry->getResources())->keys()->all();
 
         return collect($data)
@@ -56,6 +70,8 @@ final class CreateRole extends CreateRecord
             ->values()
             ->flatten()
             ->filter()
-            ->unique();
+            ->map(static fn (mixed $value): string => is_string($value) ? $value : '')
+            ->unique()
+            ->values();
     }
 }

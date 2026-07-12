@@ -15,9 +15,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $username = config('bizkit.admin_username') ?: 'admin';
-        $email = config('bizkit.admin_email') ?: 'admin@example.com';
-        $password = config('bizkit.admin_password') ?: 'password';
+        $username = $this->stringConfig('bizkit.admin_username', 'admin');
+        $email = $this->stringConfig('bizkit.admin_email', 'admin@example.com');
+        $password = $this->stringConfig('bizkit.admin_password', 'password');
 
         if (User::query()->where('email', $email)->orWhere('username', $username)->exists()) {
             return;
@@ -63,5 +63,12 @@ return new class extends Migration
 
             $user->forceDelete();
         }
+    }
+
+    private function stringConfig(string $key, string $default): string
+    {
+        $value = config($key);
+
+        return is_string($value) && $value !== '' ? $value : $default;
     }
 };

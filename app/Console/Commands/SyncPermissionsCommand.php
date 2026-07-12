@@ -11,6 +11,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Spatie\Permission\PermissionRegistrar;
+use Spatie\Permission\Support\Config;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 #[AsCommand(name: 'bizkit:sync-permissions')]
@@ -65,7 +66,9 @@ final class SyncPermissionsCommand extends Command
         $adminRoles = Role::query()->where('name', 'admin')->get();
         foreach ($adminRoles as $role) {
             $role->syncPermissions($permissionModels);
-            $this->line(sprintf('Synced permissions for admin role in team ID: %s', $role->team_id ?? 'global'));
+            $teamKey = $role->getAttribute(Config::teamForeignKey());
+            $teamDisplay = is_scalar($teamKey) ? (string) $teamKey : 'global';
+            $this->line(sprintf('Synced permissions for admin role in team ID: %s', $teamDisplay));
         }
 
         $this->info('Permissions synchronization completed successfully!');

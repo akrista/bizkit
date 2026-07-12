@@ -9,6 +9,7 @@ use App\Models\Team;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\RegisterTenant;
 use Filament\Schemas\Schema;
+use RuntimeException;
 
 final class RegisterTeam extends RegisterTenant
 {
@@ -32,6 +33,11 @@ final class RegisterTeam extends RegisterTenant
     {
         $createTeam = resolve(CreateTeam::class);
 
-        return $createTeam->handle(auth()->user(), $data['name'], isPersonal: false);
+        $user = auth()->user();
+        $name = is_string($data['name'] ?? null) ? $data['name'] : '';
+
+        throw_if($user === null, RuntimeException::class, 'User must be authenticated to register a team.');
+
+        return $createTeam->handle($user, $name, isPersonal: false);
     }
 }

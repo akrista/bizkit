@@ -18,9 +18,11 @@ final class EditProfile extends BaseEditProfile
 
         if (Filament::getTenant() === null && auth()->check()) {
             $user = auth()->user();
-            $tenant = $user->currentTeam ?? $user->personalTeam() ?? $user->teams()->first();
-            if ($tenant) {
-                Filament::setTenant($tenant);
+            if ($user !== null) {
+                $tenant = $user->currentTeam ?? $user->personalTeam() ?? $user->teams()->first();
+                if ($tenant) {
+                    Filament::setTenant($tenant);
+                }
             }
         }
     }

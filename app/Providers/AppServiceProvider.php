@@ -89,19 +89,19 @@ final class AppServiceProvider extends ServiceProvider
 
     private function configureDevCommands(): void
     {
-        $config = config('dev');
+        $config = $this->devConfig();
 
-        if ($only = $config['only'] ?? []) {
-            DevCommands::only(...$only);
+        if ($config['only'] !== []) {
+            DevCommands::only(...$config['only']);
 
             return;
         }
 
-        if ($except = $config['except'] ?? []) {
-            DevCommands::except(...$except);
+        if ($config['except'] !== []) {
+            DevCommands::except(...$config['except']);
         }
 
-        foreach ($config['processes'] ?? [] as $name => $spec) {
+        foreach ($config['processes'] as $name => $spec) {
             match ($spec['type']) {
                 'artisan' => DevCommands::artisan($spec['command'], $name),
                 'node' => DevCommands::node($spec['command'], $name),
@@ -109,6 +109,74 @@ final class AppServiceProvider extends ServiceProvider
                 default => DevCommands::register($spec['command'], $name),
             };
         }
+    }
+
+    /**
+     * @param  array<mixed>  $values
+     * @return array<int, string>
+     */
+    private function stringList(array $values): array
+    {
+        $result = [];
+
+        foreach ($values as $value) {
+            if (is_string($value)) {
+                $result[] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<mixed>  $processes
+     * @return array<string, array{type: string, command: string}>
+     */
+    private function normalizeProcesses(array $processes): array
+    {
+        $normalized = [];
+
+        foreach ($processes as $name => $spec) {
+            if (! is_string($name)) {
+                continue;
+            }
+
+            if (! is_array($spec)) {
+                continue;
+            }
+
+            $type = $spec['type'] ?? null;
+            $command = $spec['command'] ?? null;
+            if (! is_string($type)) {
+                continue;
+            }
+
+            if (! is_string($command)) {
+                continue;
+            }
+
+            $normalized[$name] = ['type' => $type, 'command' => $command];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array{only: array<int, string>, except: array<int, string>, processes: array<string, array{type: string, command: string}>}
+     */
+    private function devConfig(): array
+    {
+        $config = config('dev');
+
+        if (! is_array($config)) {
+            return ['only' => [], 'except' => [], 'processes' => []];
+        }
+
+        return [
+            'only' => is_array($config['only'] ?? null) ? $this->stringList($config['only']) : [],
+            'except' => is_array($config['except'] ?? null) ? $this->stringList($config['except']) : [],
+            'processes' => is_array($config['processes'] ?? null) ? $this->normalizeProcesses($config['processes']) : [],
+        ];
     }
 
     private function configureFilament(): void

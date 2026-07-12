@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
+use Override;
 
 #[Fillable(['name', 'slug', 'is_personal'])]
 final class Team extends Model
@@ -85,6 +86,21 @@ final class Team extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * Get the value of the model's primary key.
+     */
+    #[Override]
+    public function getKey(): int | string
+    {
+        $key = parent::getKey();
+
+        if (is_int($key) || is_string($key)) {
+            return $key;
+        }
+
+        return '';
     }
 
     /**

@@ -26,11 +26,15 @@ yarn-error.log
 /.agents
 /.claude
 /.cursor
+/.opencode
+/.pi
 /.gemini
 /.antigravitycli
 /.kiro
 /.junie
 /.github/skills
+/.github/agents
+/.github/prompts
 *mcp.json
 opencode.json
 AGENTS.md
